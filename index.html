@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OSINT Toolkit | Open Source Intelligence Hub</title>
+    <meta name="description" content="A powerful, private, and fast OSINT dashboard for digital investigations.">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-slate-950 text-slate-100">
+    <!-- Background Decor -->
+    <div class="fixed top-0 left-0 w-full h-full pointer-events-none -z-10 overflow-hidden">
+        <div class="absolute top-[-10%] right-[-10%] w-96 h-96 bg-purple-600/20 blur-[120px] rounded-full"></div>
+        <div class="absolute bottom-[-10%] left-[-10%] w-96 h-96 bg-cyan-600/10 blur-[120px] rounded-full"></div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="container mx-auto px-4 py-8 max-w-6xl min-h-screen flex flex-col">
+        
+        <!-- Header -->
+        <header class="flex flex-col md:flex-row justify-between items-center mb-12 gap-6 animate-in">
+            <div class="flex items-center gap-3">
+                <div class="p-3 bg-purple-600 rounded-xl shadow-lg shadow-purple-600/30">
+                    <i data-lucide="shield-check" class="w-8 h-8 text-white"></i>
+                </div>
+                <div>
+                    <h1 class="text-3xl font-bold gradient-text tracking-tight">OSINT Toolkit</h1>
+                    <p class="text-slate-400 text-sm">v1.0.0 • Professional Intelligence Hub</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-4">
+                <div class="flex bg-slate-900/50 p-1 rounded-lg border border-slate-800">
+                    <button id="themeToggle" class="p-2 hover:bg-slate-800 rounded-md transition-colors">
+                        <i data-lucide="moon" class="w-5 h-5"></i>
+                    </button>
+                </div>
+                <button id="clearHistory" class="text-sm text-slate-400 hover:text-red-400 transition-colors flex items-center gap-2">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    Clear History
+                </button>
+            </div>
+        </header>
+
+        <!-- Dashboard Grid -->
+        <main class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+            <!-- Username Card -->
+            <div class="glass-card rounded-2xl p-6 flex flex-col animate-in" style="animation-delay: 0.1s">
+                <div class="flex items-center gap-3 mb-4 text-purple-400">
+                    <i data-lucide="user" class="w-6 h-6"></i>
+                    <h3 class="font-semibold text-lg">User Intelligence</h3>
+                </div>
+                <p class="text-slate-400 text-sm mb-6">Track usernames across the web's major platforms.</p>
+                <div class="mt-auto relative">
+                    <input type="text" id="usernameInput" placeholder="Enter username..." 
+                        class="w-full bg-slate-900/50 border border-slate-700 rounded-lg py-3 px-4 focus:outline-none input-glow transition-all text-sm mb-3 mono-font">
+                    <button data-type="username" class="search-btn w-full bg-purple-600 hover:bg-purple-500 text-white font-medium py-2.5 rounded-lg transition-all active:scale-95 flex items-center justify-center gap-2">
+                        Execute Search <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Domain Card -->
+            <div class="glass-card rounded-2xl p-6 flex flex-col animate-in" style="animation-delay: 0.2s">
+                <div class="flex items-center gap-3 mb-4 text-cyan-400">
+                    <i data-lucide="globe" class="w-6 h-6"></i>
+                    <h3 class="font-semibold text-lg">Domain / IP</h3>
+                </div>
+                <p class="text-slate-400 text-sm mb-6">Investigate hosts, DNS records, and vulnerability reports.</p>
+                <div class="mt-auto">
+                    <input type="text" id="domainInput" placeholder="example.com or IP..." 
+                        class="w-full bg-slate-900/50 border border-slate-700 rounded-lg py-3 px-4 focus:outline-none input-glow transition-all text-sm mb-3 mono-font">
+                    <button data-type="domain" class="search-btn w-full bg-cyan-600 hover:bg-cyan-500 text-white font-medium py-2.5 rounded-lg transition-all active:scale-95 flex items-center justify-center gap-2">
+                        Look Up <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Google Dorking -->
+            <div class="glass-card rounded-2xl p-6 flex flex-col animate-in" style="animation-delay: 0.3s">
+                <div class="flex items-center gap-3 mb-4 text-amber-400">
+                    <i data-lucide="search" class="w-6 h-6"></i>
+                    <h3 class="font-semibold text-lg">Google Dorks</h3>
+                </div>
+                <p class="text-slate-400 text-sm mb-6">Generate advanced search queries for specific target domains.</p>
+                <div class="mt-auto">
+                    <input type="text" id="dorkInput" placeholder="target.com..." 
+                        class="w-full bg-slate-900/50 border border-slate-700 rounded-lg py-3 px-4 focus:outline-none input-glow transition-all text-sm mb-3 mono-font">
+                    <button data-type="dorking" class="search-btn w-full bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold py-2.5 rounded-lg transition-all active:scale-95 flex items-center justify-center gap-2">
+                        Generate Dorks <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Email Card -->
+            <div class="glass-card rounded-2xl p-6 flex flex-col animate-in" style="animation-delay: 0.4s">
+                <div class="flex items-center gap-3 mb-4 text-emerald-400">
+                    <i data-lucide="mail" class="w-6 h-6"></i>
+                    <h3 class="font-semibold text-lg">Mail Intel</h3>
+                </div>
+                <p class="text-slate-400 text-sm mb-6">Verify email validity and check for known data breaches.</p>
+                <div class="mt-auto">
+                    <input type="email" id="emailInput" placeholder="user@target.com..." 
+                        class="w-full bg-slate-900/50 border border-slate-700 rounded-lg py-3 px-4 focus:outline-none input-glow transition-all text-sm mb-3 mono-font">
+                    <button data-type="email" class="search-btn w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-2.5 rounded-lg transition-all active:scale-95 flex items-center justify-center gap-2">
+                        Validate Mail <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
+        </main>
+
+        <!-- Results Section (Initially Hidden) -->
+        <section id="resultsSection" class="hidden animate-in">
+            <div class="glass-card rounded-2xl p-8 mb-12">
+                <div class="flex justify-between items-center mb-6 border-b border-slate-800 pb-4">
+                    <h2 id="resultTitle" class="text-xl font-bold flex items-center gap-3">
+                        <i data-lucide="list" class="w-5 h-5 text-purple-400"></i>
+                        Analysis Results
+                    </h2>
+                    <span id="resultMeta" class="text-xs text-slate-500 mono-font">QUERY: NONE</span>
+                </div>
+                
+                <div id="resultsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- Result items will be injected here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- History Footer -->
+        <footer class="mt-auto border-t border-slate-800 pt-8 pb-4 animate-in" style="animation-delay: 0.5s">
+            <div class="flex items-center gap-4 mb-4">
+                <i data-lucide="history" class="w-4 h-4 text-slate-500"></i>
+                <h4 class="text-xs font-bold uppercase tracking-widest text-slate-500">Search History</h4>
+            </div>
+            <div id="historyList" class="flex flex-wrap gap-2">
+                <!-- History items injected here -->
+                <span class="text-xs text-slate-600 italic">No recent activity found.</span>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Modals / Toast -->
+    <div id="toast" class="fixed bottom-8 right-8 bg-slate-900 border border-slate-700 p-4 rounded-xl shadow-2xl opacity-0 transform translate-y-10 transition-all pointer-events-none z-50 flex items-center gap-3">
+        <i data-lucide="info" class="w-5 h-5 text-purple-400"></i>
+        <p id="toastMessage" class="text-sm font-medium"></p>
+    </div>
+
+    <script type="module" src="app.js"></script>
+    <script>
+        // Init Lucide Icons
+        window.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+        });
+    </script>
+</body>
+</html>
