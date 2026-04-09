@@ -99,10 +99,15 @@ class OSINTApp {
             if (item.url) {
                 finalUrl = item.url.replace('{query}', encodeURIComponent(query));
             } else if (item.dork) {
-                const dorkString = item.dork.replace('{query}', query);
+                let dorkString = item.dork.replace('{query}', query);
+                // Auto-fix: If query looks like a name (has spaces) and template uses site:{query}
+                if (query.includes(' ') && dorkString.includes(`site:${query}`)) {
+                    dorkString = dorkString.replace(`site:${query}`, `"${query}"`);
+                }
                 finalUrl = `https://www.google.com/search?q=${encodeURIComponent(dorkString)}`;
                 actionText = 'Run Dork';
             }
+
 
             card.innerHTML = `
                 <div class="mb-3">

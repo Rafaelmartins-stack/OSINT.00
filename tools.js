@@ -27,15 +27,18 @@ const TOOLS_CONFIG = {
     dorking: {
         title: "Google Dorking",
         icon: "search",
-        description: "Advanced search strings for intelligence.",
+        description: "Find names in public lists, registrations, and official files.",
         template: [
-            { name: "Confidential Docs", dork: 'site:{query} filetype:pdf "confidential"' },
-            { name: "Public Logins", dork: 'site:{query} inurl:login' },
-            { name: "SQL Errors", dork: 'site:{query} "sql syntax error" OR "mysql error"' },
-            { name: "Backup Files", dork: 'site:{query} filetype:sql OR filetype:bak OR filetype:zip' },
-            { name: "Directory Listing", dork: 'site:{query} intitle:"index of"' }
+            { name: "Public Lists / Names", dork: '"{query}" filetype:pdf OR filetype:xls OR filetype:doc' },
+            { name: "Official Gazettes (BR)", dork: '"{query}" site:jus.br OR "diário oficial"' },
+            { name: "Exam Registrations", dork: '"{query}" "lista de inscritos" OR "lista de aprovados"' },
+            { name: "Gov / Edu Records", dork: '"{query}" site:gov.br OR site:edu.br' },
+            { name: "Social Media Mentions", dork: '"{query}" site:facebook.com OR site:instagram.com OR site:linkedin.com' },
+            { name: "Sensitive Docs (Domain)", dork: 'site:{query} filetype:pdf "confidential"' }
         ]
     },
+
+
     email: {
         title: "Email Validator",
         icon: "mail",
