@@ -1,4 +1,53 @@
-import TOOLS_CONFIG from './tools.js';
+const TOOLS_CONFIG = {
+    username: {
+        title: "Person Search",
+        icon: "fingerprint",
+        description: "Deep search for individuals on specialized investigative platforms.",
+        template: [
+            { name: "Escavador (Records)", url: "https://www.escavador.com/busca?q={query}" },
+            { name: "Jusbrasil (Legal)", url: "https://www.jusbrasil.com.br/busca?q={query}" },
+            { name: "LinkedIn", url: "https://www.google.com/search?q=site:linkedin.com/in/ \"{query}\"" },
+            { name: "Instagram", url: "https://www.instagram.com/explore/tags/{query}/" },
+            { name: "Twitter/X", url: "https://twitter.com/search?q=\"{query}\"&f=user" },
+            { name: "FaceCheck.ID (Face Search)", url: "https://facecheck.id/" }
+        ]
+    },
+    domain: {
+        title: "Domain / IP Lookup",
+        icon: "globe",
+        description: "Analyze domains and IP addresses.",
+        template: [
+            { name: "Who.is", url: "https://who.is/whois/{query}" },
+            { name: "VirusTotal", url: "https://www.virustotal.com/gui/search/{query}" },
+            { name: "Shodan", url: "https://www.shodan.io/search?query={query}" },
+            { name: "SecurityTrails", url: "https://securitytrails.com/domain/{query}" },
+            { name: "DNSDumpster", url: "https://dnsdumpster.com/" }
+        ]
+    },
+    dorking: {
+        title: "Google Dorking",
+        icon: "search",
+        description: "Find names in public lists, registrations, and official files.",
+        template: [
+            { name: "Public Lists / Names", dork: '"{query}" filetype:pdf OR filetype:xls OR filetype:doc' },
+            { name: "Official Gazettes (BR)", dork: '"{query}" site:jus.br OR "diário oficial"' },
+            { name: "Exam Registrations", dork: '"{query}" "lista de inscritos" OR "lista de aprovados"' },
+            { name: "Gov / Edu Records", dork: '"{query}" site:gov.br OR site:edu.br' },
+            { name: "Social Media Mentions", dork: '"{query}" site:facebook.com OR site:instagram.com OR site:linkedin.com' },
+            { name: "Sensitive Docs (Domain)", dork: 'site:{query} filetype:pdf "confidential"' }
+        ]
+    },
+    email: {
+        title: "Email Validator",
+        icon: "mail",
+        description: "Verify email format and potential leaks.",
+        template: [
+            { name: "HaveIBeenPwned", url: "https://haveibeenpwned.com/account/{query}" },
+            { name: "EPIEOS", url: "https://epieos.com/?q={query}" },
+            { name: "Hunter.io", url: "https://hunter.io/try/verify/{query}" }
+        ]
+    }
+};
 
 class OSINTApp {
     constructor() {
@@ -12,14 +61,12 @@ class OSINTApp {
         this.renderHistory();
         this.applyTheme();
         
-        // Refresh icons initially
         if (window.lucide) {
             window.lucide.createIcons();
         }
     }
 
     setupEventListeners() {
-        // Search buttons
         document.querySelectorAll('.search-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const type = e.currentTarget.dataset.type;
@@ -27,17 +74,14 @@ class OSINTApp {
             });
         });
 
-        // Clear history
         document.getElementById('clearHistory').addEventListener('click', () => {
             this.clearHistory();
         });
 
-        // Theme toggle
         document.getElementById('themeToggle').addEventListener('click', () => {
             this.toggleTheme();
         });
 
-        // Input enter keys
         const inputs = ['usernameInput', 'domainInput', 'dorkInput', 'emailInput'];
         inputs.forEach(id => {
             const el = document.getElementById(id);
@@ -45,7 +89,7 @@ class OSINTApp {
                 el.addEventListener('keypress', (e) => {
                     if (e.key === 'Enter') {
                         const type = id.replace('Input', '');
-                        this.handleSearch(type === 'dork' ? 'dorking' : type);
+                        this.handleSearch(type === 'dork' ? 'dorking' : (type === 'username' ? 'username' : type));
                     }
                 });
             }
@@ -53,17 +97,12 @@ class OSINTApp {
     }
 
     handleSearch(type) {
-        const inputId = type === 'dorking' ? 'dorkInput' : `${type}Input`;
+        const inputId = type === 'dorking' ? 'dorkInput' : (type === 'username' ? 'usernameInput' : `${type}Input`);
         const inputEl = document.getElementById(inputId);
         const query = inputEl.value.trim();
 
         if (!query) {
             this.showToast('Please enter a target to investigate.', 'error');
-            return;
-        }
-
-        if (type === 'email' && !this.validateEmail(query)) {
-            this.showToast('Please enter a valid email address.', 'error');
             return;
         }
 
@@ -74,18 +113,15 @@ class OSINTApp {
         const config = TOOLS_CONFIG[type];
         if (!config) return;
 
-        // Show results section
         const resultsSection = document.getElementById('resultsSection');
         resultsSection.classList.remove('hidden');
         
-        // Update Meta
         document.getElementById('resultMeta').textContent = `QUERY: ${query.toUpperCase()}`;
         document.getElementById('resultTitle').innerHTML = `
             <i data-lucide="${config.icon}" class="w-5 h-5"></i>
             ${config.title} Results
         `;
 
-        // Clear and fill grid
         const grid = document.getElementById('resultsGrid');
         grid.innerHTML = '';
 
@@ -97,17 +133,16 @@ class OSINTApp {
             let actionText = 'Visit Tool';
 
             if (item.url) {
-                finalUrl = item.url.replace('{query}', encodeURIComponent(query));
+                finalUrl = item.url.replace(/{query}/g, encodeURIComponent(query));
             } else if (item.dork) {
-                let dorkString = item.dork.replace('{query}', query);
-                // Auto-fix: If query looks like a name (has spaces) and template uses site:{query}
+                let dorkString = item.dork.replace(/{query}/g, query);
+                // Fix site: for names
                 if (query.includes(' ') && dorkString.includes(`site:${query}`)) {
                     dorkString = dorkString.replace(`site:${query}`, `"${query}"`);
                 }
                 finalUrl = `https://www.google.com/search?q=${encodeURIComponent(dorkString)}`;
                 actionText = 'Run Dork';
             }
-
 
             card.innerHTML = `
                 <div class="mb-3">
@@ -122,32 +157,20 @@ class OSINTApp {
             grid.appendChild(card);
         });
 
-        // Add to history
         this.addToHistory(type, query);
         
-        // Re-init icons for dynamic content
         if (window.lucide) {
             window.lucide.createIcons();
         }
 
-        // Scroll to results
         resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        
         this.showToast(`Results generated for ${query}`, 'success');
     }
 
     addToHistory(type, query) {
-        // Remove duplicate if exists
         this.history = this.history.filter(item => !(item.type === type && item.query === query));
-        
-        // Prepend new item
         this.history.unshift({ type, query, timestamp: new Date().toISOString() });
-        
-        // Keep only top 5
-        if (this.history.length > 5) {
-            this.history = this.history.slice(0, 5);
-        }
-
+        if (this.history.length > 5) this.history = this.history.slice(0, 5);
         localStorage.setItem('osint_history', JSON.stringify(this.history));
         this.renderHistory();
     }
@@ -155,7 +178,6 @@ class OSINTApp {
     renderHistory() {
         const list = document.getElementById('historyList');
         if (!list) return;
-
         if (this.history.length === 0) {
             list.innerHTML = `<span class="text-xs text-slate-600 italic">No recent activity found.</span>`;
             return;
@@ -169,11 +191,10 @@ class OSINTApp {
             </button>
         `).join('');
 
-        // Handle history clicks
         list.querySelectorAll('.history-item').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const { type, query } = e.currentTarget.dataset;
-                const inputId = type === 'dorking' ? 'dorkInput' : `${type}Input`;
+                const inputId = type === 'dorking' ? 'dorkInput' : (type === 'username' ? 'usernameInput' : `${type}Input`);
                 const el = document.getElementById(inputId);
                 if (el) el.value = query;
                 this.executeSearch(type, query);
@@ -188,12 +209,6 @@ class OSINTApp {
         this.showToast('History cleared.');
     }
 
-    validateEmail(email) {
-        return String(email)
-            .toLowerCase()
-            .match(/^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/);
-    }
-
     toggleTheme() {
         this.currentTheme = this.currentTheme === 'dark' ? 'light' : 'dark';
         localStorage.setItem('osint_theme', this.currentTheme);
@@ -203,7 +218,6 @@ class OSINTApp {
     applyTheme() {
         const body = document.body;
         const toggleIcon = document.querySelector('#themeToggle i');
-        
         if (this.currentTheme === 'light') {
             body.classList.add('light-mode');
             if (toggleIcon) toggleIcon.setAttribute('data-lucide', 'sun');
@@ -211,21 +225,15 @@ class OSINTApp {
             body.classList.remove('light-mode');
             if (toggleIcon) toggleIcon.setAttribute('data-lucide', 'moon');
         }
-        
         if (window.lucide) window.lucide.createIcons();
     }
 
     showToast(message, type = 'info') {
         const toast = document.getElementById('toast');
         const msgEl = document.getElementById('toastMessage');
-        const icon = toast.querySelector('i');
-
         msgEl.textContent = message;
-        
-        // Reset animation
         toast.classList.remove('opacity-0', 'translate-y-10');
         toast.classList.add('opacity-100', 'translate-y-0');
-
         setTimeout(() => {
             toast.classList.add('opacity-0', 'translate-y-10');
             toast.classList.remove('opacity-100', 'translate-y-0');
@@ -233,7 +241,6 @@ class OSINTApp {
     }
 }
 
-// Initialize App
 document.addEventListener('DOMContentLoaded', () => {
     new OSINTApp();
 });
