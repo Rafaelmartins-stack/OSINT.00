@@ -51,7 +51,11 @@ const TOOLS_CONFIG = {
 
 class OSINTApp {
     constructor() {
-        this.history = JSON.parse(localStorage.getItem('osint_history')) || [];
+        this.history = [];
+        try {
+            this.history = JSON.parse(localStorage.getItem('osint_history')) || [];
+        } catch(e) { console.error("History fail", e); }
+        
         this.currentTheme = localStorage.getItem('osint_theme') || 'dark';
         this.init();
     }
@@ -60,38 +64,38 @@ class OSINTApp {
         this.setupEventListeners();
         this.renderHistory();
         this.applyTheme();
-        
-        if (window.lucide) {
-            window.lucide.createIcons();
+        this.refreshIcons();
+    }
+
+    refreshIcons() {
+        if (typeof lucide !== 'undefined' && lucide.createIcons) {
+            lucide.createIcons();
         }
     }
 
     setupEventListeners() {
         document.querySelectorAll('.search-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const type = e.currentTarget.dataset.type;
+            btn.onclick = (e) => {
+                const type = e.currentTarget.getAttribute('data-type');
                 this.handleSearch(type);
-            });
+            };
         });
 
-        document.getElementById('clearHistory').addEventListener('click', () => {
-            this.clearHistory();
-        });
+        const clearBtn = document.getElementById('clearHistory');
+        if (clearBtn) clearBtn.onclick = () => this.clearHistory();
 
-        document.getElementById('themeToggle').addEventListener('click', () => {
-            this.toggleTheme();
-        });
+        const themeBtn = document.getElementById('themeToggle');
+        if (themeBtn) themeBtn.onclick = () => this.toggleTheme();
 
-        const inputs = ['usernameInput', 'domainInput', 'dorkInput', 'emailInput'];
-        inputs.forEach(id => {
+        ['usernameInput', 'domainInput', 'dorkInput', 'emailInput'].forEach(id => {
             const el = document.getElementById(id);
             if (el) {
-                el.addEventListener('keypress', (e) => {
+                el.onkeypress = (e) => {
                     if (e.key === 'Enter') {
                         const type = id.replace('Input', '');
                         this.handleSearch(type === 'dork' ? 'dorking' : (type === 'username' ? 'username' : type));
                     }
-                });
+                };
             }
         });
     }
@@ -99,10 +103,11 @@ class OSINTApp {
     handleSearch(type) {
         const inputId = type === 'dorking' ? 'dorkInput' : (type === 'username' ? 'usernameInput' : `${type}Input`);
         const inputEl = document.getElementById(inputId);
-        const query = inputEl.value.trim();
+        if (!inputEl) return;
 
+        const query = inputEl.value.trim();
         if (!query) {
-            this.showToast('Please enter a target to investigate.', 'error');
+            this.showToast('Digite um alvo para investigar.', 'error');
             return;
         }
 
@@ -114,15 +119,18 @@ class OSINTApp {
         if (!config) return;
 
         const resultsSection = document.getElementById('resultsSection');
-        resultsSection.classList.remove('hidden');
+        if (resultsSection) resultsSection.classList.remove('hidden');
         
-        document.getElementById('resultMeta').textContent = `QUERY: ${query.toUpperCase()}`;
-        document.getElementById('resultTitle').innerHTML = `
-            <i data-lucide="${config.icon}" class="w-5 h-5"></i>
-            ${config.title} Results
-        `;
+        const metaEl = document.getElementById('resultMeta');
+        if (metaEl) metaEl.textContent = `ALVO: ${query.toUpperCase()}`;
+
+        const titleEl = document.getElementById('resultTitle');
+        if (titleEl) {
+            titleEl.innerHTML = `<i data-lucide="${config.icon}" class="w-5 h-5"></i> ${config.title} - Resultados`;
+        }
 
         const grid = document.getElementById('resultsGrid');
+        if (!grid) return;
         grid.innerHTML = '';
 
         config.template.forEach(item => {
@@ -130,41 +138,38 @@ class OSINTApp {
             card.className = 'glass-card p-4 rounded-xl result-item animate-in flex flex-col justify-between';
             
             let finalUrl = '';
-            let actionText = 'Visit Tool';
+            let displayPath = '';
 
             if (item.url) {
-                finalUrl = item.url.replace(/{query}/g, encodeURIComponent(query));
+                finalUrl = item.url.split('{query}').join(encodeURIComponent(query));
+                displayPath = finalUrl;
             } else if (item.dork) {
-                let dorkString = item.dork.replace(/{query}/g, query);
-                // Fix site: for names
+                let dorkString = item.dork.split('{query}').join(query);
                 if (query.includes(' ') && dorkString.includes(`site:${query}`)) {
-                    dorkString = dorkString.replace(`site:${query}`, `"${query}"`);
+                    dorkString = dorkString.split(`site:${query}`).join(`"${query}"`);
                 }
                 finalUrl = `https://www.google.com/search?q=${encodeURIComponent(dorkString)}`;
-                actionText = 'Run Dork';
+                displayPath = dorkString;
             }
 
             card.innerHTML = `
-                <div class="mb-3">
+                <div class="mb-3 overflow-hidden">
                     <h4 class="font-bold text-sm text-slate-200">${item.name}</h4>
-                    <p class="text-xs text-slate-500 truncate mt-1 mono-font">${item.dork || finalUrl}</p>
+                    <p class="text-[10px] text-slate-500 truncate mt-1 mono-font" title="${displayPath}">${displayPath}</p>
                 </div>
                 <a href="${finalUrl}" target="_blank" rel="noopener noreferrer" 
                     class="mt-auto inline-flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-xs font-semibold py-2 px-4 rounded-lg transition-colors border border-slate-700">
-                    ${actionText} <i data-lucide="external-link" class="w-3 h-3"></i>
+                    Abrir Ferramenta <i data-lucide="external-link" class="w-3 h-3"></i>
                 </a>
             `;
             grid.appendChild(card);
         });
 
         this.addToHistory(type, query);
-        
-        if (window.lucide) {
-            window.lucide.createIcons();
-        }
+        this.refreshIcons();
 
-        resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        this.showToast(`Results generated for ${query}`, 'success');
+        if (resultsSection) resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        this.showToast(`Relatório gerado para: ${query}`, 'success');
     }
 
     addToHistory(type, query) {
@@ -179,26 +184,26 @@ class OSINTApp {
         const list = document.getElementById('historyList');
         if (!list) return;
         if (this.history.length === 0) {
-            list.innerHTML = `<span class="text-xs text-slate-600 italic">No recent activity found.</span>`;
+            list.innerHTML = `<span class="text-xs text-slate-600 italic">Sem histórico recente.</span>`;
             return;
         }
 
         list.innerHTML = this.history.map(item => `
-            <button class="history-item text-xs bg-slate-900 border border-slate-800 hover:border-purple-500/50 hover:bg-slate-800 px-3 py-1.5 rounded-full flex items-center gap-2 transition-all"
+            <button class="history-item text-[10px] bg-slate-900 border border-slate-800 hover:border-purple-500/50 hover:bg-slate-800 px-3 py-1 rounded-full flex items-center gap-2 transition-all"
                 data-type="${item.type}" data-query="${item.query}">
-                <span class="opacity-50">${item.type}</span>
+                <span class="opacity-40 uppercase">${item.type}</span>
                 <span class="font-medium">${item.query}</span>
             </button>
         `).join('');
 
         list.querySelectorAll('.history-item').forEach(btn => {
-            btn.addEventListener('click', (e) => {
+            btn.onclick = (e) => {
                 const { type, query } = e.currentTarget.dataset;
                 const inputId = type === 'dorking' ? 'dorkInput' : (type === 'username' ? 'usernameInput' : `${type}Input`);
                 const el = document.getElementById(inputId);
                 if (el) el.value = query;
                 this.executeSearch(type, query);
-            });
+            };
         });
     }
 
@@ -206,7 +211,7 @@ class OSINTApp {
         this.history = [];
         localStorage.removeItem('osint_history');
         this.renderHistory();
-        this.showToast('History cleared.');
+        this.showToast('Histórico limpo.');
     }
 
     toggleTheme() {
@@ -225,12 +230,13 @@ class OSINTApp {
             body.classList.remove('light-mode');
             if (toggleIcon) toggleIcon.setAttribute('data-lucide', 'moon');
         }
-        if (window.lucide) window.lucide.createIcons();
+        this.refreshIcons();
     }
 
     showToast(message, type = 'info') {
         const toast = document.getElementById('toast');
         const msgEl = document.getElementById('toastMessage');
+        if (!toast || !msgEl) return;
         msgEl.textContent = message;
         toast.classList.remove('opacity-0', 'translate-y-10');
         toast.classList.add('opacity-100', 'translate-y-0');
@@ -241,6 +247,12 @@ class OSINTApp {
     }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    new OSINTApp();
-});
+// Inicialização segura
+(function() {
+    const startApp = () => new OSINTApp();
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', startApp);
+    } else {
+        startApp();
+    }
+})();
