@@ -38,15 +38,19 @@ const TOOLS_CONFIG = {
         ]
     },
     email: {
-        title: "Email Validator",
+        title: "Mail Intel",
         icon: "mail",
-        description: "Verify email format and potential leaks.",
+        description: "Discovery accounts and data leaks linked to an email address.",
         template: [
-            { name: "HaveIBeenPwned", url: "https://haveibeenpwned.com/account/{query}" },
-            { name: "EPIEOS", url: "https://epieos.com/?q={query}" },
-            { name: "Hunter.io", url: "https://hunter.io/try/verify/{query}" }
+            { name: "EPIEOS (Account Discovery)", url: "https://epieos.com/?q={query}" },
+            { name: "HaveIBeenPwned (Leaks)", url: "https://haveibeenpwned.com/account/{query}" },
+            { name: "IntelX (Data Search)", url: "https://intelx.io/?s={query}" },
+            { name: "Hunter.io (Company Info)", url: "https://hunter.io/try/verify/{query}" },
+            { name: "Social Search (Dork)", dork: '"{query}" site:facebook.com OR site:twitter.com OR site:instagram.com' },
+            { name: "Pastebin / Leaks", dork: 'site:pastebin.com OR site:github.com "{query}"' }
         ]
     }
+
 };
 
 class OSINTApp {
