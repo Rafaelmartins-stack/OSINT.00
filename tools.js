@@ -1,17 +1,18 @@
 const TOOLS_CONFIG = {
     username: {
-        title: "Username Search",
+        title: "Person Search",
         icon: "user",
-        description: "Search for profiles across social networks.",
+        description: "Deep search for individuals on specialized platforms.",
         template: [
-            { name: "Instagram", url: "https://www.instagram.com/{query}/" },
-            { name: "Twitter/X", url: "https://twitter.com/{query}" },
-            { name: "GitHub", url: "https://github.com/{query}" },
-            { name: "LinkedIn", url: "https://www.linkedin.com/in/{query}/" },
-            { name: "Reddit", url: "https://www.reddit.com/user/{query}" },
-            { name: "Behance", url: "https://www.behance.net/{query}" }
+            { name: "Escavador (Records)", url: "https://www.escavador.com/busca?q={query}" },
+            { name: "Jusbrasil (Legal)", url: "https://www.jusbrasil.com.br/busca?q={query}" },
+            { name: "LinkedIn", url: "https://www.google.com/search?q=site:linkedin.com/in/ \"{query}\"" },
+            { name: "Instagram", url: "https://www.instagram.com/explore/tags/{query}/" },
+            { name: "Twitter/X", url: "https://twitter.com/search?q=\"{query}\"&f=user" },
+            { name: "FaceCheck.ID (Face Search)", url: "https://facecheck.id/" }
         ]
     },
+
     domain: {
         title: "Domain / IP Lookup",
         icon: "globe",
