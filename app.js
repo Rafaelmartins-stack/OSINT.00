@@ -83,11 +83,51 @@ class OSINTApp {
         this.renderHistory();
     }
 
-    init() {
         this.setupEventListeners();
         this.renderHistory();
         this.applyTheme();
         this.refreshIcons();
+        this.initInfoModal();
+    }
+
+    initInfoModal() {
+        const modal = document.getElementById('infoModal');
+        const openBtn = document.getElementById('infoToggle');
+        const closeBtn = document.getElementById('closeInfo');
+
+        if (!modal || !openBtn || !closeBtn) return;
+
+        const openModal = () => {
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                const card = modal.querySelector('.glass-card');
+                if (card) card.classList.remove('scale-95');
+            }, 10);
+        };
+
+        const closeModal = () => {
+            modal.classList.add('opacity-0');
+            const card = modal.querySelector('.glass-card');
+            if (card) card.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 300);
+        };
+
+        openBtn.addEventListener('click', openModal);
+        closeBtn.addEventListener('click', closeModal);
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeModal();
+        });
+
+        // ESC to close
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
+                closeModal();
+            }
+        });
     }
 
     refreshIcons() {

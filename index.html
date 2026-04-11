@@ -34,13 +34,16 @@
             
             <div class="flex items-center gap-4">
                 <div class="flex bg-slate-900/50 p-1 rounded-lg border border-slate-800">
+                    <button id="infoToggle" class="p-2 hover:bg-slate-800 rounded-md transition-colors text-slate-400 hover:text-purple-400" title="O que é OSINT?">
+                        <i data-lucide="info" class="w-5 h-5"></i>
+                    </button>
                     <button id="themeToggle" class="p-2 hover:bg-slate-800 rounded-md transition-colors">
                         <i data-lucide="moon" class="w-5 h-5"></i>
                     </button>
                 </div>
                 <button id="clearHistory" class="text-sm text-slate-400 hover:text-red-400 transition-colors flex items-center gap-2">
                     <i data-lucide="trash-2" class="w-4 h-4"></i>
-                    Clear History
+                    Limpar Histórico
                 </button>
             </div>
         </header>
@@ -141,6 +144,63 @@
                 <span class="text-xs text-slate-600 italic">No recent activity found.</span>
             </div>
         </footer>
+    </div>
+
+    <!-- OSINT Info Modal -->
+    <div id="infoModal" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm hidden opacity-0 transition-opacity duration-300">
+        <div class="glass-card max-w-2xl w-full p-8 rounded-3xl relative overflow-hidden transform scale-95 transition-transform duration-300 shadow-2xl border-purple-500/30">
+            <button id="closeInfo" class="absolute top-6 right-6 p-2 hover:bg-slate-800 rounded-full text-slate-400 hover:text-white transition-all">
+                <i data-lucide="x" class="w-6 h-6"></i>
+            </button>
+            
+            <div class="flex items-center gap-4 mb-6">
+                <div class="p-3 bg-purple-600/20 rounded-2xl border border-purple-500/30">
+                    <i data-lucide="book-open" class="w-8 h-8 text-purple-400"></i>
+                </div>
+                <div>
+                    <h3 class="text-2xl font-bold text-white">O que é OSINT?</h3>
+                    <p class="text-purple-400/70 text-sm font-mono uppercase tracking-widest">Open Source Intelligence</p>
+                </div>
+            </div>
+
+            <div class="space-y-6 text-slate-300">
+                <p class="leading-relaxed">
+                    <span class="text-white font-semibold">OSINT (Inteligência de Fontes Abertas)</span> é o processo de coletar e analisar informações que estão disponíveis publicamente na internet ou em outros meios abertos.
+                </p>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-slate-900/50 p-4 rounded-xl border border-slate-800">
+                        <h4 class="text-xs font-bold text-purple-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                            <i data-lucide="layers" class="w-3 h-3"></i> Fontes Comuns
+                        </h4>
+                        <ul class="text-sm space-y-1.5 text-slate-400">
+                            <li class="flex items-center gap-2"><i data-lucide="check" class="w-3 h-3 text-emerald-500"></i> Redes Sociais</li>
+                            <li class="flex items-center gap-2"><i data-lucide="check" class="w-3 h-3 text-emerald-500"></i> Notícias e Blogs</li>
+                            <li class="flex items-center gap-2"><i data-lucide="check" class="w-3 h-3 text-emerald-500"></i> Documentos Públicos</li>
+                            <li class="flex items-center gap-2"><i data-lucide="check" class="w-3 h-3 text-emerald-500"></i> Fóruns e Deep Web</li>
+                        </ul>
+                    </div>
+                    <div class="bg-slate-900/50 p-4 rounded-xl border border-slate-800">
+                        <h4 class="text-xs font-bold text-purple-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                            <i data-lucide="briefcase" class="w-3 h-3"></i> Aplicações
+                        </h4>
+                        <ul class="text-sm space-y-1.5 text-slate-400">
+                            <li class="flex items-center gap-2"><i data-lucide="check" class="w-3 h-3 text-emerald-500"></i> Cibersegurança</li>
+                            <li class="flex items-center gap-2"><i data-lucide="check" class="w-3 h-3 text-emerald-500"></i> Investigações Ativas</li>
+                            <li class="flex items-center gap-2"><i data-lucide="check" class="w-3 h-3 text-emerald-500"></i> Jornalismo de Dados</li>
+                            <li class="flex items-center gap-2"><i data-lucide="check" class="w-3 h-3 text-emerald-500"></i> Inteligência de Mercado</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl">
+                    <p class="text-[11px] text-amber-400 leading-tight">
+                        <span class="font-bold flex items-center gap-1 mb-1 italic"><i data-lucide="alert-triangle" class="w-3 h-3"></i> Importante:</span>
+                        O OSINT utiliza <span class="font-bold">apenas dados públicos</span>, ou seja, opera sem invadir sistemas ou violar leis de privacidade, focando na inteligência de dados expostos.
+                    </p>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Modals / Toast -->
