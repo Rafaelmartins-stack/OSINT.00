@@ -58,10 +58,12 @@ const SOCIAL_PLATFORMS = [
     { id: 'tiktok', name: 'TikTok', url: 'https://www.tiktok.com/@{query}', icon: 'music', color: 'from-slate-900 to-slate-700' },
     { id: 'github', name: 'GitHub', url: 'https://github.com/{query}', icon: 'github', color: 'from-slate-800 to-black' },
     { id: 'linkedin', name: 'LinkedIn', url: 'https://www.linkedin.com/in/{query}', icon: 'linkedin', color: 'from-blue-700 to-blue-800' },
-    { id: 'twitch', name: 'Twitch', url: 'https://www.twitch.tv/{query}', icon: 'video', color: 'from-purple-600 to-purple-700' },
     { id: 'pinterest', name: 'Pinterest', url: 'https://www.pinterest.com/{query}/', icon: 'pin', color: 'from-red-600 to-red-500' },
     { id: 'youtube', name: 'YouTube', url: 'https://www.youtube.com/@{query}', icon: 'youtube', color: 'from-red-700 to-red-800' },
-    { id: 'behance', name: 'Behance', url: 'https://www.behance.net/{query}', icon: 'image', color: 'from-blue-500 to-blue-600' }
+    { id: 'behance', name: 'Behance', url: 'https://www.behance.net/{query}', icon: 'image', color: 'from-blue-500 to-blue-600' },
+    { id: 'spotify', name: 'Spotify', url: 'https://open.spotify.com/user/{query}', icon: 'music', color: 'from-green-500 to-green-600' },
+    { id: 'medium', name: 'Medium', url: 'https://medium.com/@{query}', icon: 'file-text', color: 'from-slate-900 to-black' },
+    { id: 'vimeo', name: 'Vimeo', url: 'https://vimeo.com/{query}', icon: 'play', color: 'from-blue-400 to-blue-500' }
 ];
 
 class OSINTApp {
@@ -579,7 +581,9 @@ class OSINTApp {
         const targets = [
             { id: 'instagram', site: 'instagram.com', regex: /instagram\.com\/([a-zA-Z0-9._]+)/i },
             { id: 'twitter', site: 'twitter.com', regex: /twitter\.com\/([a-zA-Z0-9._]+)/i },
-            { id: 'tiktok', site: 'tiktok.com', regex: /tiktok\.com\/@([a-zA-Z0-9._]+)/i }
+            { id: 'tiktok', site: 'tiktok.com', regex: /tiktok\.com\/@([a-zA-Z0-9._]+)/i },
+            { id: 'pinterest', site: 'pinterest.com', regex: /pinterest\.com\/([a-zA-Z0-9._]+)/i },
+            { id: 'youtube', site: 'youtube.com', regex: /youtube\.com\/@([a-zA-Z0-9._]+)/i }
         ];
 
         targets.forEach(async (t) => {
@@ -715,9 +719,15 @@ class OSINTApp {
                                          titleLower.includes('couldn\'t find this account') ||
                                          titleLower.includes('visit tiktok to discover') ||
                                          titleLower.includes('buy this domain') ||
+                                         titleLower.includes('authorization') ||
+                                         titleLower.includes('unauthorized') ||
+                                         titleLower.includes('sign in') ||
+                                         profile.title.trim() === platform.name ||
                                          (platform.id === 'twitter' && profile.title === 'X') ||
                                          (platform.id === 'instagram' && !profile.title.includes('• Instagram')) ||
                                          (platform.id === 'tiktok' && !profile.title.includes('TikTok')) ||
+                                         (platform.id === 'twitch' && profile.description?.includes('Twitch is the world')) ||
+                                         (platform.id === 'behance' && titleLower.includes('behance.net')) ||
                                          (platform.id === 'linkedin' && (titleLower.includes('google search') || titleLower.includes('pre-auth')));
 
                         if (!isNotFound) {
