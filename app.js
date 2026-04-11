@@ -172,51 +172,37 @@ class OSINTApp {
 
         const grid = document.getElementById('resultsGrid');
         if (!grid) return;
-        grid.innerHTML = '';
+        grid.innerHTML = `
+            <div id="searchingArea" class="col-span-full border-2 border-dashed border-slate-800 rounded-2xl p-12 text-center animate-pulse">
+                <div class="flex flex-col items-center gap-4">
+                    <div class="w-12 h-12 bg-purple-500/10 rounded-full flex items-center justify-center border border-purple-500/20 mb-2">
+                        <i data-lucide="shield-search" class="w-6 h-6 text-purple-400"></i>
+                    </div>
+                    <h3 class="text-white font-bold text-lg">Auditando Bases de Dados...</h3>
+                    <p class="text-slate-400 text-sm max-w-sm mx-auto">Verificando a existência de registros para <span class="text-purple-400 font-mono">"${query}"</span> nas bases oficiais. Este processo garante que apenas ferramentas com dados reais sejam exibidas.</p>
+                </div>
+            </div>
+        `;
+        this.refreshIcons();
 
-        config.template.forEach(item => {
-            const card = document.createElement('div');
-            card.className = 'glass-card p-4 rounded-xl result-item animate-in flex flex-col justify-between';
-            
-            let finalUrl = '';
-            let displayPath = '';
-
-            if (item.url) {
-                finalUrl = item.url.split('{query}').join(encodeURIComponent(query));
-                displayPath = finalUrl;
-            } else if (item.dork) {
-                let dorkString = item.dork.split('{query}').join(query);
-                if (query.includes(' ') && dorkString.includes(`site:${query}`)) {
-                    dorkString = dorkString.split(`site:${query}`).join(`"${query}"`);
+        // Separate tools into those that need verification and those that don't
+        Promise.all(config.template.map(item => this.validateAndRender(item, query, grid))).then(() => {
+            const searchArea = document.getElementById('searchingArea');
+            if (searchArea) {
+                // Check if any results were added. If still empty (besides loader), show "No results"
+                if (grid.children.length <= 1) {
+                    searchArea.innerHTML = `
+                        <div class="flex flex-col items-center gap-4">
+                            <i data-lucide="search-x" class="w-12 h-12 text-slate-600"></i>
+                            <h3 class="text-slate-200 font-bold text-lg">Nenhum registro encontrado</h3>
+                            <p class="text-slate-500 text-sm max-w-sm mx-auto">Não foram detectados vínculos diretos para este nome nas bases auditadas.</p>
+                        </div>
+                    `;
+                } else {
+                    searchArea.remove();
                 }
-                finalUrl = `https://www.google.com/search?q=${encodeURIComponent(dorkString)}`;
-                displayPath = dorkString;
             }
-
-            const dorkString = item.dork ? item.dork.split('{query}').join(query) : '';
-            const safeDork = dorkString.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-
-            const mineBtn = item.dork ? `
-                <button data-dork="${safeDork}" onclick="window.osintApp.mineDorkResults(this.getAttribute('data-dork'), this)" 
-                    class="mt-1 inline-flex items-center justify-center gap-2 bg-purple-600/20 hover:bg-purple-600 text-purple-300 hover:text-white border border-purple-500/30 text-[10px] font-bold py-2 px-4 rounded-lg transition-all w-full">
-                    <i data-lucide="microscope" class="w-3.5 h-3.5"></i> Minerar Todos Links
-                </button>
-            ` : '';
-
-            card.innerHTML = `
-                <div class="mb-3 overflow-hidden">
-                    <h4 class="font-bold text-sm text-slate-200">${item.name}</h4>
-                    <p class="text-[10px] text-slate-500 truncate mt-1 mono-font" title="${displayPath}">${displayPath}</p>
-                </div>
-                <div class="flex flex-col gap-2 mt-auto">
-                    ${mineBtn}
-                    <a href="${finalUrl}" target="_blank" rel="noopener noreferrer" 
-                        class="inline-flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-xs font-semibold py-2 px-4 rounded-lg transition-colors border border-slate-700">
-                        Abrir Ferramenta <i data-lucide="external-link" class="w-3 h-3"></i>
-                    </a>
-                </div>
-            `;
-            grid.appendChild(card);
+            this.refreshIcons();
         });
 
         this.performLiveOSINT(type, query, grid);
@@ -225,7 +211,65 @@ class OSINTApp {
         this.refreshIcons();
 
         if (resultsSection) resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        this.showToast(`Planilha de investigação gerada para: ${query}`, 'success');
+        this.showToast(`Auditoria de registros iniciada para: ${query}`, 'info');
+    }
+
+    async validateAndRender(item, query, grid) {
+        let finalUrl = '';
+        let displayPath = '';
+
+        if (item.url) {
+            finalUrl = item.url.split('{query}').join(encodeURIComponent(query));
+            displayPath = finalUrl;
+        } else if (item.dork) {
+            let dorkString = item.dork.split('{query}').join(query);
+            finalUrl = `https://www.google.com/search?q=${encodeURIComponent(dorkString)}`;
+            displayPath = dorkString;
+        }
+
+        // If it's a dorking tool, we MUST verify results before showing the card
+        if (item.dork) {
+            try {
+                const searchUrl = `https://duckduckgo.com/html/?q=${encodeURIComponent(item.dork.split('{query}').join(query))}`;
+                const response = await fetch(`https://api.microlink.io?url=${encodeURIComponent(searchUrl)}&data.results.selector=.result__title&data.results.type=list`);
+                const data = await response.json();
+
+                // If no results are found, skip this card
+                if (!data.status === 'success' || !data.data.results || data.data.results.length === 0) {
+                    return;
+                }
+            } catch (e) {
+                // If the check fails (API down), we show it anyway as fallback
+            }
+        }
+
+        const dorkString = item.dork ? item.dork.split('{query}').join(query) : '';
+        const safeDork = dorkString.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+        const mineBtn = item.dork ? `
+            <button data-dork="${safeDork}" onclick="window.osintApp.mineDorkResults(this.getAttribute('data-dork'), this)" 
+                class="mt-1 inline-flex items-center justify-center gap-2 bg-purple-600/20 hover:bg-purple-600 text-purple-300 hover:text-white border border-purple-500/30 text-[10px] font-bold py-2 px-4 rounded-lg transition-all w-full">
+                <i data-lucide="microscope" class="w-3.5 h-3.5"></i> Minerar Todos Links
+            </button>
+        ` : '';
+
+        const card = document.createElement('div');
+        card.className = 'glass-card p-4 rounded-xl result-item animate-in flex flex-col justify-between h-full';
+        card.innerHTML = `
+            <div class="mb-3 overflow-hidden">
+                <h4 class="font-bold text-sm text-slate-200">${item.name}</h4>
+                <p class="text-[10px] text-slate-500 truncate mt-1 mono-font" title="${displayPath}">${displayPath}</p>
+            </div>
+            <div class="flex flex-col gap-2 mt-auto">
+                ${mineBtn}
+                <a href="${finalUrl}" target="_blank" rel="noopener noreferrer" 
+                    class="inline-flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-xs font-semibold py-2 px-4 rounded-lg transition-colors border border-slate-700">
+                    Abrir Ferramenta <i data-lucide="external-link" class="w-3 h-3"></i>
+                </a>
+            </div>
+        `;
+        grid.appendChild(card);
+        this.refreshIcons();
     }
 
     async mineDorkResults(dork, btn) {
