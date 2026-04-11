@@ -191,8 +191,11 @@ class OSINTApp {
                 displayPath = dorkString;
             }
 
+            const dorkString = item.dork ? item.dork.split('{query}').join(query) : '';
+            const safeDork = dorkString.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
             const mineBtn = item.dork ? `
-                <button onclick="window.osintApp.mineDorkResults('${item.dork.split('{query}').join(query).replace(/'/g, "\\'")}', this)" 
+                <button data-dork="${safeDork}" onclick="window.osintApp.mineDorkResults(this.getAttribute('data-dork'), this)" 
                     class="mt-1 inline-flex items-center justify-center gap-2 bg-purple-600/20 hover:bg-purple-600 text-purple-300 hover:text-white border border-purple-500/30 text-[10px] font-bold py-2 px-4 rounded-lg transition-all w-full">
                     <i data-lucide="microscope" class="w-3.5 h-3.5"></i> Minerar Todos Links
                 </button>
@@ -755,7 +758,7 @@ class OSINTApp {
         }
 
         const pivotBtn = data.realName ? `
-            <button onclick="window.osintApp.pivotToPersonSearch('${data.realName.replace(/'/g, "\\'")}')" 
+            <button data-name="${data.realName.replace(/"/g, '&quot;')}" onclick="window.osintApp.pivotToPersonSearch(this.getAttribute('data-name'))" 
                 class="w-full mt-3 bg-purple-600/20 hover:bg-purple-600 text-purple-300 hover:text-white border border-purple-500/30 text-[10px] font-bold py-2 rounded-lg transition-all flex items-center justify-center gap-2">
                 <i data-lucide="crosshair" class="w-3 h-3"></i> Investigar: ${data.realName}
             </button>
