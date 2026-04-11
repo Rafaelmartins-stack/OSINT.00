@@ -122,7 +122,55 @@ class OSINTApp {
             return;
         }
 
+        // Generate and show variations for potential handles
+        if (type === 'username' || type === 'email') {
+            const handle = this.extractUsername(query);
+            this.renderVariations(handle, inputId);
+        }
+
         this.executeSearch(type, query);
+    }
+
+    generateVariations(base) {
+        const clean = base.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const variants = new Set();
+        if (base.length > 2) {
+            variants.add(`${base}_`);
+            variants.add(`${base}.`);
+            variants.add(`${base}-`);
+            if (!base.match(/\d$/)) {
+                 variants.add(`${base}1`);
+                 variants.add(`${base}123`);
+            }
+            if (base !== clean && clean.length > 2) variants.add(clean);
+        }
+        return Array.from(variants);
+    }
+
+    renderVariations(handle, inputId) {
+        const inputEl = document.getElementById(inputId);
+        let varContainer = document.getElementById('variantContainer');
+        
+        if (!varContainer) {
+            varContainer = document.createElement('div');
+            varContainer.id = 'variantContainer';
+            varContainer.className = 'mt-3 flex flex-wrap gap-2 animate-in';
+            inputEl.parentNode.appendChild(varContainer);
+        }
+        
+        const variants = this.generateVariations(handle);
+        varContainer.innerHTML = `
+            <span class="text-[10px] text-slate-500 uppercase tracking-tighter w-full mb-1 flex items-center gap-1">
+                <i data-lucide="sparkles" class="w-3 h-3"></i> Sugestões de Variação:
+            </span>
+            ${variants.map(v => `
+                <button onclick="document.getElementById('${inputId}').value='${v}'; window.osintApp.handleSearch('${inputId.replace('Input', '')}')" 
+                    class="text-[10px] bg-slate-900 border border-slate-800 hover:border-purple-500/50 px-2 py-0.5 rounded transition-all text-slate-400 hover:text-purple-300">
+                    ${v}
+                </button>
+            `).join('')}
+        `;
+        this.refreshIcons();
     }
 
     executeSearch(type, query) {
@@ -202,15 +250,15 @@ class OSINTApp {
 
     extractRealName(title, id) {
         if (!title) return null;
-        let name = title;
+        let name = decodeURIComponent(title);
         // Instagram: "Full Name (@username) • Instagram photos"
         if (id === 'instagram') {
-            const match = title.match(/^(.*?) \(@/i);
+            const match = name.match(/^(.*?) \(@/i);
             if (match) name = match[1];
         }
         // Twitter: "Username (@handle) / X"
         else if (id === 'twitter') {
-            const match = title.match(/^(.*?) \(@/i);
+            const match = name.match(/^(.*?) \(@/i);
             if (match) name = match[1];
         }
         // TikTok: "TikTok - @handle - Full Name" or similar
@@ -231,11 +279,12 @@ class OSINTApp {
     }
 
     pivotToPersonSearch(name) {
+        const decodedName = decodeURIComponent(name);
         const input = document.getElementById('usernameInput');
         if (input) {
-            input.value = name;
+            input.value = decodedName;
             this.handleSearch('username');
-            this.showToast(`Pivoting: Investigating "${name}"`, 'success');
+            this.showToast(`Pivoting: Investigating "${decodedName}"`, 'success');
         }
     }
 
@@ -313,6 +362,8 @@ class OSINTApp {
                                      titleLower.includes('page not found') || 
                                      titleLower.includes('página não encontrada') || 
                                      titleLower.includes('content not available') || 
+                                     titleLower.includes('couldn\'t find this account') ||
+                                     titleLower.includes('visit tiktok to discover') ||
                                      (platform.id === 'twitter' && profile.title === 'X') ||
                                      (platform.id === 'instagram' && !profile.title.includes('• Instagram'));
 
