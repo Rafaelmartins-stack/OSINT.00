@@ -386,16 +386,63 @@ class OSINTApp {
             location: null
         };
 
-        // 1. Email Specific: Gravatar
+        // 1. Email Specific: Gravatar & Deep Correlation
         if (type === 'email') {
             this.scanGravatar(query, grid);
+            this.scanEmailCorrelations(query, grid);
         }
 
         // 2. Social Media Deep Scan (Username based)
-        // We scan for both username and email (extraction) types
         if (type === 'username' || type === 'email') {
             this.scanSocialPlatforms(username, grid);
         }
+    }
+
+    async scanEmailCorrelations(email, grid) {
+        // Prepare container for Correlation results
+        const corrId = `correlation-results-${Date.now()}`;
+        const container = document.createElement('div');
+        container.className = 'col-span-full animate-in mt-4 mb-4 px-2';
+        container.innerHTML = `
+            <div id="${corrId}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Direct email links will appear here -->
+            </div>
+        `;
+        grid.prepend(container);
+        const corrGrid = document.getElementById(corrId);
+
+        // Targeted platforms for Email in Bio (Dork-based via Microlink)
+        const targets = [
+            { id: 'instagram', site: 'instagram.com' },
+            { id: 'twitter', site: 'twitter.com' },
+            { id: 'github', site: 'github.com' }
+        ];
+
+        targets.forEach(async (t) => {
+            try {
+                const dork = `site:${t.site} "${email}"`;
+                const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(dork)}`;
+                // We use microlink as a proxy to see if Google has a snippet with this email
+                const response = await fetch(`https://api.microlink.io?url=${encodeURIComponent(searchUrl)}&meta=true`);
+                const data = await response.json();
+
+                if (data.status === 'success' && data.data.title && !data.data.title.includes('Google Search')) {
+                    // If we find a specific page title that isn't just "Google Search", it's likely a profile
+                    this.injectSocialResult(corrGrid, {
+                        id: t.id,
+                        name: t.id.charAt(0).toUpperCase() + t.id.slice(1),
+                        handle: "Vínculo Direto",
+                        title: data.data.title,
+                        description: data.data.description,
+                        image: `https://unavatar.io/${t.id}/${email}`,
+                        url: data.data.url,
+                        isEmailMatch: true,
+                        color: "from-emerald-500 to-teal-600",
+                        icon: "mail-check"
+                    });
+                }
+            } catch (e) {}
+        });
     }
 
     async scanGravatar(email, grid) {
@@ -510,7 +557,14 @@ class OSINTApp {
             </button>
         ` : '';
 
+        const badgeHtml = data.isEmailMatch ? `
+            <div class="absolute top-3 right-3 px-2 py-1 bg-emerald-500/20 border border-emerald-500/30 rounded text-[9px] text-emerald-400 font-bold uppercase tracking-tighter flex items-center gap-1 z-20">
+                <i data-lucide="check-circle" class="w-2.5 h-2.5"></i> Vínculo por E-mail
+            </div>
+        ` : '';
+
         item.innerHTML = `
+            ${badgeHtml}
             <div class="absolute -top-10 -right-10 w-24 h-24 bg-gradient-to-br ${data.color} opacity-5 blur-2xl rounded-full group-hover:opacity-20 transition-opacity"></div>
             
             <div class="relative z-10">
