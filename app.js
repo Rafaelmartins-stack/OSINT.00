@@ -191,15 +191,25 @@ class OSINTApp {
                 displayPath = dorkString;
             }
 
+            const mineBtn = item.dork ? `
+                <button onclick="window.osintApp.mineDorkResults('${item.dork.split('{query}').join(query).replace(/'/g, "\\'")}', this)" 
+                    class="mt-2 inline-flex items-center justify-center gap-2 bg-purple-600/20 hover:bg-purple-600 text-purple-300 hover:text-white border border-purple-500/30 text-[10px] font-bold py-2 px-4 rounded-lg transition-all w-full">
+                    <i data-lucide="microscope" class="w-3.5 h-3.5"></i> Minerar Resultados
+                </button>
+            ` : '';
+
             card.innerHTML = `
                 <div class="mb-3 overflow-hidden">
                     <h4 class="font-bold text-sm text-slate-200">${item.name}</h4>
                     <p class="text-[10px] text-slate-500 truncate mt-1 mono-font" title="${displayPath}">${displayPath}</p>
                 </div>
-                <a href="${finalUrl}" target="_blank" rel="noopener noreferrer" 
-                    class="mt-auto inline-flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-xs font-semibold py-2 px-4 rounded-lg transition-colors border border-slate-700">
-                    Abrir Ferramenta <i data-lucide="external-link" class="w-3 h-3"></i>
-                </a>
+                <div class="flex flex-col gap-2 mt-auto">
+                    ${mineBtn}
+                    <a href="${finalUrl}" target="_blank" rel="noopener noreferrer" 
+                        class="inline-flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-xs font-semibold py-2 px-4 rounded-lg transition-colors border border-slate-700">
+                        Abrir Ferramenta <i data-lucide="external-link" class="w-3 h-3"></i>
+                    </a>
+                </div>
             `;
             grid.appendChild(card);
         });
@@ -210,7 +220,85 @@ class OSINTApp {
         this.refreshIcons();
 
         if (resultsSection) resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        this.showToast(`Relatório gerado para: ${query}`, 'success');
+        this.showToast(`Planilha de investigação gerada para: ${query}`, 'success');
+    }
+
+    async mineDorkResults(dork, btn) {
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = `<i data-lucide="refresh-cw" class="w-3.5 h-3.5 animate-spin"></i> Minerando...`;
+        this.refreshIcons();
+        
+        try {
+            // Using DuckDuckGo as a reliable SERP source for background scraping
+            const searchUrl = `https://duckduckgo.com/html/?q=${encodeURIComponent(dork)}`;
+            const response = await fetch(`https://api.microlink.io?url=${encodeURIComponent(searchUrl)}&data.results.selector=.result__title&data.results.type=list&data.results.attr=href`);
+            const data = await response.json();
+
+            if (data.status === 'success' && data.data.results) {
+                const results = data.data.results;
+                this.showToast(`Sucesso! Encontrados ${results.length} links diretos.`, 'success');
+                
+                // Create a results container if it doesn't exist
+                let findingsGrid = document.getElementById('deepFindingsGrid');
+                if (!findingsGrid) {
+                    const section = document.createElement('div');
+                    section.className = 'col-span-full mt-8 animate-in';
+                    section.innerHTML = `
+                        <div class="flex items-center gap-3 mb-6">
+                            <i data-lucide="database" class="w-4 h-4 text-emerald-400"></i>
+                            <h3 class="text-xs font-black uppercase tracking-widest text-emerald-400">Registros Identificados via Deep Search</h3>
+                            <div class="h-px flex-1 bg-gradient-to-r from-emerald-500/30 to-transparent"></div>
+                        </div>
+                        <div id="deepFindingsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+                    `;
+                    document.getElementById('resultsGrid').after(section);
+                    findingsGrid = document.getElementById('deepFindingsGrid');
+                    this.refreshIcons();
+                }
+
+                results.slice(0, 10).forEach(async (encodedLink) => {
+                    // DuckDuckGo HTML links often come with proxying, but we can try to clean or fetch meta
+                    const link = decodeURIComponent(encodedLink.split('uddg=')[1]?.split('&')[0] || encodedLink);
+                    if (link.startsWith('http')) {
+                        // Fetch meta for each link to show a nice card
+                        const metaRes = await fetch(`https://api.microlink.io?url=${encodeURIComponent(link)}&meta=true`);
+                        const metaData = await metaRes.json();
+                        
+                        if (metaData.status === 'success') {
+                            const result = metaData.data;
+                            const card = document.createElement('div');
+                            card.className = 'glass-card p-4 rounded-xl border border-emerald-500/20 hover:border-emerald-500/50 transition-all flex flex-col gap-3 relative overflow-hidden';
+                            card.innerHTML = `
+                                <div class="absolute -top-10 -right-10 w-24 h-24 bg-emerald-500 opacity-5 blur-2xl rounded-full"></div>
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
+                                        <i data-lucide="file-text" class="w-4 h-4 text-emerald-400"></i>
+                                    </div>
+                                    <div class="min-w-0">
+                                        <h5 class="text-xs font-bold text-white truncate">${result.title || 'Documento sem título'}</h5>
+                                        <p class="text-[9px] text-slate-500 truncate font-mono">${new URL(link).hostname}</p>
+                                    </div>
+                                </div>
+                                <p class="text-[10px] text-slate-400 line-clamp-2">${result.description || 'Nenhuma descrição disponível para este registro.'}</p>
+                                <a href="${link}" target="_blank" class="mt-2 w-full bg-emerald-600/10 hover:bg-emerald-600 text-emerald-400 hover:text-white border border-emerald-500/30 text-[10px] font-bold py-2 rounded transition-all text-center">
+                                    Visualizar Registro Completo
+                                </a>
+                                <div class="absolute top-2 right-2 px-1.5 py-0.5 bg-emerald-500/10 border border-emerald-500/20 rounded text-[8px] text-emerald-500 font-bold uppercase">PROVA</div>
+                            `;
+                            findingsGrid.prepend(card);
+                            this.refreshIcons();
+                        }
+                    }
+                });
+            } else {
+                this.showToast('Nenhum link direto encontrado nesta varredura.', 'info');
+            }
+        } catch (e) {
+            this.showToast('Erro ao minerar links. Tente novamente.', 'error');
+        } finally {
+            btn.innerHTML = originalHtml;
+            this.refreshIcons();
+        }
     }
 
     addToHistory(type, query) {
