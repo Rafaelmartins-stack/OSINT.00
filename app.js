@@ -142,11 +142,12 @@ class OSINTApp {
         const variants = new Set();
         if (base.length > 2) {
             variants.add(`${base}_`);
+            variants.add(`${base}1`);
+            variants.add(`_${base}`);
             variants.add(`${base}.`);
             variants.add(`${base}-`);
-            if (!base.match(/\d$/)) {
-                 variants.add(`${base}1`);
-                 variants.add(`${base}123`);
+            if (base.length > 5) {
+                variants.add(`${base.substring(0, base.length - 1)}`);
             }
             if (base !== clean && clean.length > 2) variants.add(clean);
         }
@@ -755,6 +756,7 @@ class OSINTApp {
                     if (data.status === 'success' && data.data.title) {
                         const profile = data.data;
                         const titleLower = profile.title.toLowerCase();
+                        const descLower = (profile.description || '').toLowerCase();
                         
                         const isNotFound = titleLower.includes('404') || 
                                          titleLower.includes('page not found') || 
@@ -762,15 +764,21 @@ class OSINTApp {
                                          titleLower.includes('content not available') || 
                                          titleLower.includes('couldn\'t find this account') ||
                                          titleLower.includes('visit tiktok to discover') ||
+                                         titleLower.includes('faça o seu dia') ||
+                                         titleLower.includes('não perca o que está acontecendo') ||
                                          titleLower.includes('buy this domain') ||
                                          titleLower.includes('authorization') ||
                                          titleLower.includes('unauthorized') ||
                                          titleLower.includes('sign in') ||
                                          profile.title.trim() === platform.name ||
-                                         (platform.id === 'twitter' && profile.title === 'X') ||
+                                         profile.title === 'X' ||
+                                         profile.title === 'Perfil / X' ||
+                                         descLower.includes('não perca o que está acontecendo') ||
+                                         descLower === 'tiktok pwa' ||
+                                         (platform.id === 'twitter' && (profile.title === 'X' || profile.title === 'Twitter')) ||
                                          (platform.id === 'instagram' && !profile.title.includes('• Instagram')) ||
-                                         (platform.id === 'tiktok' && !profile.title.includes('TikTok')) ||
-                                         (platform.id === 'twitch' && profile.description?.includes('Twitch is the world')) ||
+                                         (platform.id === 'tiktok' && (!profile.title.includes('TikTok') || titleLower.includes('faça o seu dia'))) ||
+                                         (platform.id === 'twitch' && descLower.includes('twitch is the world')) ||
                                          (platform.id === 'behance' && titleLower.includes('behance.net')) ||
                                          (platform.id === 'linkedin' && (titleLower.includes('google search') || titleLower.includes('pre-auth')));
 
