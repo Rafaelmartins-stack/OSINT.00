@@ -545,7 +545,79 @@ class OSINTApp {
         // 2. Social Media Handle Scan: Only if specifically requested as a handle
         if (type === 'username') {
             this.scanSocialPlatforms(username, grid);
+            // DEEP HARVEST: Crawl Instagram for ALL linked accounts
+            this.harvestSocialProfiles(query, 'instagram', grid);
+            this.harvestSocialProfiles(query, 'linkedin', grid);
         }
+    }
+
+    async harvestSocialProfiles(query, platformId, grid) {
+        const platform = SOCIAL_PLATFORMS.find(p => p.id === platformId);
+        if (!platform) return;
+
+        try {
+            // Dork to find multiple profiles indexed on the site
+            const dork = `site:${new URL(platform.url.replace('{query}', 'abc')).hostname} "${query}"`;
+            const searchUrl = `https://duckduckgo.com/html/?q=${encodeURIComponent(dork)}`;
+            const response = await fetch(`https://api.microlink.io?url=${encodeURIComponent(searchUrl)}&data.results.selector=.result__title&data.results.type=list&data.results.attr=href`);
+            const data = await response.json();
+
+            if (data.status === 'success' && data.data.results) {
+                // Deduplicate and filter out non-profile links
+                const links = [...new Set(data.data.results)]
+                    .filter(link => {
+                        const l = link.toLowerCase();
+                        return l.includes(platformId) && 
+                               !l.includes('/p/') && // Skip posts
+                               !l.includes('/explore/') && // Skip explore
+                               !l.includes('/tags/') && // Skip tags
+                               !l.includes('/search'); // Skip search
+                    });
+
+                links.slice(0, 5).forEach(async (encodedLink) => {
+                    const link = decodeURIComponent(encodedLink.split('uddg=')[1]?.split('&')[0] || encodedLink);
+                    const handle = link.split('/').filter(p => p).pop().split('?')[0];
+
+                    if (handle && !this.scannedHandles.has(handle)) {
+                        this.scannedHandles.add(handle);
+                        
+                        // Validate this specific harvested handle
+                        const res = await fetch(`https://api.microlink.io?url=${encodeURIComponent(link)}&meta=true`);
+                        const profileData = await res.json();
+
+                        if (profileData.status === 'success' && profileData.data.title) {
+                            const profile = profileData.data;
+                            const titleLower = profile.title.toLowerCase();
+                            const descLower = (profile.description || '').toLowerCase();
+
+                            // Strict validation for existence
+                            const isNotFound = titleLower.includes('404') || 
+                                             titleLower.includes('page not found') || 
+                                             descLower.includes('não perca o que está acontecendo') ||
+                                             descLower === 'tiktok pwa' ||
+                                             profile.title.trim() === platform.name ||
+                                             (platform.id === 'instagram' && !titleLower.includes('instagram')) ||
+                                             (platform.id === 'instagram' && (titleLower === 'instagram' || descLower.includes('login')));
+
+                            if (!isNotFound) {
+                                this.injectSocialResult(grid, {
+                                    ...platform,
+                                    handle: handle,
+                                    title: profile.title,
+                                    realName: this.extractRealName(profile.title, platform.id),
+                                    description: profile.description,
+                                    image: profile.image?.url || `https://unavatar.io/${platform.id}/${handle}`,
+                                    url: link,
+                                    isBridgeMatch: true, // Mark as discovered via scan
+                                    color: "from-cyan-400 to-blue-600", // Distinguishing color for harvested results
+                                    icon: "search"
+                                });
+                            }
+                        }
+                    }
+                });
+            }
+        } catch (e) {}
     }
 
     async scanGitHubByEmail(email, grid) {
