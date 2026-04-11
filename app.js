@@ -390,15 +390,18 @@ class OSINTApp {
             location: null
         };
 
-        // 1. Email Specific: Gravatar & Deep Correlation & GitHub
+        // 1. Email Specific Path: No guessing, only technical bridges
         if (type === 'email') {
+            this.showToast("Iniciando Varredura de Identidade Técnica...", "info");
             this.scanGravatar(query, grid);
             this.scanEmailCorrelations(query, grid);
             this.scanGitHubByEmail(query, grid);
+            // We NO LONGER call scanSocialPlatforms(username) here to avoid guesses.
+            // scanSocialPlatforms will only be called IF a bridge finds a confirmed handle.
         }
 
-        // 2. Social Media Deep Scan (Username based)
-        if (type === 'username' || type === 'email') {
+        // 2. Social Media Handle Scan: Only if specifically requested as a handle
+        if (type === 'username') {
             this.scanSocialPlatforms(username, grid);
         }
     }
