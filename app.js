@@ -247,8 +247,8 @@ class OSINTApp {
 
         if (item.dork) {
             try {
-                const searchUrl = `https://duckduckgo.com/html/?q=${encodeURIComponent(item.dork.split('{query}').join(query))}`;
-                const response = await fetch(`https://api.microlink.io?url=${encodeURIComponent(searchUrl)}&data.results.selector=.result__title&data.results.type=list`);
+                const searchUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(item.dork.split('{query}').join(query))}`;
+                const response = await fetch(`https://api.microlink.io?url=${encodeURIComponent(searchUrl)}&data.results.selector=.result__a&data.results.type=list&data.results.attr=href`);
                 const data = await response.json();
                 if (data.status !== 'success' || !data.data || !data.data.results || data.data.results.length === 0) {
                     return;
@@ -292,8 +292,8 @@ class OSINTApp {
         btn.innerHTML = `<i data-lucide="refresh-cw" class="w-3.5 h-3.5 animate-spin"></i> Minerando...`;
         this.refreshIcons();
         try {
-            const searchUrl = `https://duckduckgo.com/html/?q=${encodeURIComponent(dork)}`;
-            const response = await fetch(`https://api.microlink.io?url=${encodeURIComponent(searchUrl)}&data.results.selector=.result__title&data.results.type=list&data.results.attr=href`);
+            const searchUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(dork)}`;
+            const response = await fetch(`https://api.microlink.io?url=${encodeURIComponent(searchUrl)}&data.results.selector=.result__a&data.results.type=list&data.results.attr=href`);
             const data = await response.json();
             if (data.status === 'success' && data.data.results) {
                 const results = data.data.results;
@@ -467,12 +467,12 @@ class OSINTApp {
         if (!platform) return;
         try {
             const dork = `site:${new URL(platform.url.replace('{query}', 'abc')).hostname} "${query}"`;
-            const searchUrl = `https://duckduckgo.com/html/?q=${encodeURIComponent(dork)}`;
-            const response = await fetch(`https://api.microlink.io?url=${encodeURIComponent(searchUrl)}&data.results.selector=.result__title&data.results.type=list&data.results.attr=href`);
+            const searchUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(dork)}`;
+            const response = await fetch(`https://api.microlink.io?url=${encodeURIComponent(searchUrl)}&data.results.selector=.result__a&data.results.type=list&data.results.attr=href`);
             const data = await response.json();
             if (data.status === 'success' && data.data.results) {
                 const links = [...new Set(data.data.results)].filter(link => link.toLowerCase().includes(platformId));
-                links.slice(0, 5).forEach(async (encodedLink) => {
+                links.slice(0, 10).forEach(async (encodedLink) => {
                     const link = decodeURIComponent(encodedLink.split('uddg=')[1]?.split('&')[0] || encodedLink);
                     const handle = link.split('/').filter(p => p).pop().split('?')[0];
                     if (handle && !this.scannedHandles.has(handle)) {
@@ -481,7 +481,7 @@ class OSINTApp {
                         const profileData = await res.json();
                         if (profileData.status === 'success' && profileData.data.title) {
                             const profile = profileData.data;
-                            if (!profile.title.toLowerCase().includes('login') && !profile.title.toLowerCase().includes('404')) {
+                            if (!profile.title.toLowerCase().includes('404')) {
                                 this.injectSocialResult(grid, {
                                     ...platform,
                                     handle: handle,
@@ -561,8 +561,8 @@ class OSINTApp {
         try {
             // Find social profiles that mention the email
             const dork = `"${email}" site:instagram.com OR site:facebook.com OR site:linkedin.com OR site:twitter.com`;
-            const searchUrl = `https://duckduckgo.com/html/?q=${encodeURIComponent(dork)}`;
-            const response = await fetch(`https://api.microlink.io?url=${encodeURIComponent(searchUrl)}&data.results.selector=.result__title&data.results.type=list&data.results.attr=href`);
+            const searchUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(dork)}`;
+            const response = await fetch(`https://api.microlink.io?url=${encodeURIComponent(searchUrl)}&data.results.selector=.result__a&data.results.type=list&data.results.attr=href`);
             const data = await response.json();
 
             if (data.status === 'success' && data.data.results) {
