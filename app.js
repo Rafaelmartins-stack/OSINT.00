@@ -72,6 +72,7 @@ class OSINTApp {
             location: null
         };
         this.currentTheme = localStorage.getItem('osint_theme') || 'dark';
+        this.scannedHandles = new Set();
         this.init();
         this.renderHistory();
     }
@@ -375,6 +376,8 @@ class OSINTApp {
 
     async performLiveOSINT(type, query, grid) {
         const username = this.extractUsername(query);
+        this.scannedHandles = new Set();
+        this.scannedHandles.add(username);
         
         // Reset local intel for a fresh scan
         this.currentIntel = {
@@ -386,15 +389,51 @@ class OSINTApp {
             location: null
         };
 
-        // 1. Email Specific: Gravatar & Deep Correlation
+        // 1. Email Specific: Gravatar & Deep Correlation & GitHub
         if (type === 'email') {
             this.scanGravatar(query, grid);
             this.scanEmailCorrelations(query, grid);
+            this.scanGitHubByEmail(query, grid);
         }
 
         // 2. Social Media Deep Scan (Username based)
         if (type === 'username' || type === 'email') {
             this.scanSocialPlatforms(username, grid);
+        }
+    }
+
+    async scanGitHubByEmail(email, grid) {
+        try {
+            const response = await fetch(`https://api.github.com/search/users?q=${encodeURIComponent(email)}`);
+            if (response.ok) {
+                const data = await response.json();
+                if (data.total_count > 0) {
+                    const user = data.items[0];
+                    this.injectSocialResult(grid, {
+                        id: 'github',
+                        name: 'GitHub',
+                        handle: user.login,
+                        title: `GitHub: ${user.login}`,
+                        description: `Conta vinculada ao e-mail encontrada via GitHub API.`,
+                        image: user.avatar_url,
+                        url: user.html_url,
+                        isBridgeMatch: true,
+                        color: "from-amber-400 to-orange-600",
+                        icon: "github"
+                    });
+                    
+                    // Auto-Pivot to this new handle
+                    this.pivotDeepScan(user.login, grid);
+                }
+            }
+        } catch(e) {}
+    }
+
+    pivotDeepScan(newHandle, grid) {
+        if (!this.scannedHandles.has(newHandle)) {
+            this.scannedHandles.add(newHandle);
+            this.showToast(`Pivoting: Investigating new handle "${newHandle}"`, 'success');
+            this.scanSocialPlatforms(newHandle, grid);
         }
     }
 
@@ -452,15 +491,41 @@ class OSINTApp {
             if (response.ok) {
                 const data = await response.json();
                 const profile = data.entry[0];
+                
+                // Show Main Gravatar Card
                 this.injectLiveCard(grid, {
-                    platform: "Gravatar Integration",
+                    platform: "Gravatar Profile",
                     icon: "fingerprint",
                     avatar: profile.thumbnailUrl,
-                    name: profile.displayName || profile.preferredUsername || "Email Registered",
+                    name: profile.displayName || profile.preferredUsername || "Email Ativo",
                     username: profile.preferredUsername || "N/A",
                     details: [{ label: "Profile", value: profile.profileUrl, link: true }],
-                    about: profile.aboutMe || "Account linked to this email found."
+                    about: profile.aboutMe || "Identidade confirmada vinculada a este e-mail."
                 });
+
+                // --- SOCIAL BRIDGE: Verified Accounts ---
+                if (profile.verifiedAccounts && profile.verifiedAccounts.length > 0) {
+                    profile.verifiedAccounts.forEach(acc => {
+                        const serviceId = acc.shortname || acc.service_type;
+                        const handle = acc.url.split('/').pop().split('?')[0];
+
+                        this.injectSocialResult(grid, {
+                            id: serviceId,
+                            name: acc.service_label || serviceId,
+                            handle: handle,
+                            title: `Verificado: ${acc.service_label}`,
+                            description: `Esta conta foi vinculada e verificada pelo dono do e-mail no Gravatar.`,
+                            image: acc.service_icon || `https://unavatar.io/${serviceId}/${handle}`,
+                            url: acc.url,
+                            isBridgeMatch: true,
+                            color: "from-amber-400 to-orange-600",
+                            icon: "link-2"
+                        });
+
+                        // Important: Auto-Pivot to discover more on this specific handle
+                        this.pivotDeepScan(handle, grid);
+                    });
+                }
             }
         } catch(e) {}
     }
@@ -561,7 +626,13 @@ class OSINTApp {
             <div class="absolute top-3 right-3 px-2 py-1 bg-emerald-500/20 border border-emerald-500/30 rounded text-[9px] text-emerald-400 font-bold uppercase tracking-tighter flex items-center gap-1 z-20">
                 <i data-lucide="check-circle" class="w-2.5 h-2.5"></i> Vínculo por E-mail
             </div>
-        ` : '';
+        ` : (data.isBridgeMatch ? `
+            <div class="absolute top-3 right-3 px-2 py-1 bg-amber-500/20 border border-amber-500/30 rounded text-[9px] text-amber-400 font-bold uppercase tracking-tighter flex items-center gap-1 z-20">
+                <i data-lucide="link-2" class="w-2.5 h-2.5"></i> Vínculo Confirmado
+            </div>
+        ` : '');
+
+        const cardStyle = data.isBridgeMatch ? 'border-amber-500/50 shadow-[0_0_15px_rgba(245,158,11,0.1)]' : 'border-slate-800';
 
         item.innerHTML = `
             ${badgeHtml}
@@ -570,7 +641,7 @@ class OSINTApp {
             <div class="relative z-10">
                 <div class="flex items-center gap-4 mb-4">
                     <div class="relative">
-                        <img src="${data.image}" class="w-12 h-12 rounded-xl object-cover border-2 border-slate-700 group-hover:border-purple-500/50 transition-colors shadow-lg" onerror="this.src='https://unavatar.io/${data.id}/${data.handle}?fallback=https://via.placeholder.com/100'">
+                        <img src="${data.image}" class="w-12 h-12 rounded-xl object-cover border-2 ${data.isBridgeMatch ? 'border-amber-500' : 'border-slate-700'} group-hover:border-purple-500/50 transition-colors shadow-lg" onerror="this.src='https://unavatar.io/${data.id}/${data.handle}?fallback=https://via.placeholder.com/100'">
                         <div class="absolute -bottom-1 -right-1 p-1 bg-slate-900 rounded-lg border border-slate-800">
                              <i data-lucide="${data.icon}" class="w-3 h-3 text-slate-300"></i>
                         </div>
@@ -587,10 +658,10 @@ class OSINTApp {
                     ${data.description || 'Perfil identificado e validado.'}
                 </p>
             </div>
-
+            
             <div class="mt-6 flex flex-col gap-2 relative z-10">
                 ${pivotBtn}
-                <a href="${data.url}" target="_blank" class="w-full bg-slate-800 hover:bg-slate-700 border border-slate-700 text-[10px] text-center py-2 rounded-lg transition-all text-slate-300 hover:text-white flex items-center justify-center gap-2">
+                <a href="${data.url}" target="_blank" class="w-full ${data.isBridgeMatch ? 'bg-amber-600/20 hover:bg-amber-600 text-amber-300' : 'bg-slate-800 hover:bg-slate-700 text-slate-300'} border border-slate-700 text-[10px] text-center py-2 rounded-lg transition-all hover:text-white flex items-center justify-center gap-2">
                     <i data-lucide="external-link" class="w-3 h-3"></i> Acessar Perfil
                 </a>
             </div>
