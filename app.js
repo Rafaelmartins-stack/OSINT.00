@@ -48,10 +48,16 @@ const TOOLS_CONFIG = {
             { name: "Hunter.io (Company Info)", url: "https://hunter.io/try/verify/{query}" },
             { name: "Social Search (Dork)", dork: '"{query}" site:facebook.com OR site:twitter.com OR site:instagram.com' },
             { name: "Pastebin / Leaks", dork: 'site:pastebin.com OR site:github.com "{query}"' }
-        ]
     }
-
 };
+
+const SOCIAL_PLATFORMS = [
+    { id: 'instagram', name: 'Instagram', url: 'https://www.instagram.com/{query}/', icon: 'instagram', color: 'from-pink-500 to-purple-500' },
+    { id: 'twitter', name: 'Twitter/X', url: 'https://twitter.com/{query}', icon: 'twitter', color: 'from-blue-400 to-blue-600' },
+    { id: 'tiktok', name: 'TikTok', url: 'https://www.tiktok.com/@{query}', icon: 'music', color: 'from-slate-900 to-slate-700' },
+    { id: 'github', name: 'GitHub', url: 'https://github.com/{query}', icon: 'github', color: 'from-slate-800 to-black' },
+    { id: 'pinterest', name: 'Pinterest', url: 'https://www.pinterest.com/{query}/', icon: 'pin', color: 'from-red-600 to-red-500' }
+];
 
 class OSINTApp {
     constructor() {
@@ -186,50 +192,128 @@ class OSINTApp {
         this.renderHistory();
     }
 
-    async performLiveOSINT(type, query, grid) {
-        if (type === 'email') {
-            try {
-                // Gravatar API supports CORS and reveals active accounts
-                const hash = CryptoJS.MD5(query.toLowerCase().trim()).toString();
-                const response = await fetch(`https://en.gravatar.com/${hash}.json`);
-                if (response.ok) {
-                    const data = await response.json();
-                    const profile = data.entry[0];
-                    this.injectLiveCard(grid, {
-                        platform: "Gravatar Integration",
-                        icon: "fingerprint",
-                        avatar: profile.thumbnailUrl,
-                        name: profile.displayName || profile.preferredUsername || "Unknown Name",
-                        username: profile.preferredUsername || "N/A",
-                        details: [
-                            { label: "Profile Link", value: profile.profileUrl, link: true }
-                        ],
-                        about: profile.aboutMe || ""
-                    });
-                }
-            } catch(e) { console.log('Gravatar fetch failed', e) }
-        } else if (type === 'username') {
-             try {
-                // Github Open API reveals followers, etc.
-                const response = await fetch(`https://api.github.com/users/${query}`);
-                if (response.ok) {
-                    const profile = await response.json();
-                    this.injectLiveCard(grid, {
-                        platform: "GitHub Profile",
-                        icon: "code",
-                        avatar: profile.avatar_url,
-                        name: profile.name || profile.login,
-                        username: profile.login,
-                        details: [
-                            { label: "Followers", value: profile.followers },
-                            { label: "Following", value: profile.following },
-                            { label: "Public Repos", value: profile.public_repos }
-                        ],
-                        link: profile.html_url
-                    });
-                }
-            } catch(e) { console.log('Github fetch failed', e) }
+    extractUsername(query) {
+        if (query.includes('@')) {
+            return query.split('@')[0];
         }
+        return query;
+    }
+
+    async performLiveOSINT(type, query, grid) {
+        const username = this.extractUsername(query);
+        
+        // 1. Email Specific: Gravatar
+        if (type === 'email') {
+            this.scanGravatar(query, grid);
+        }
+
+        // 2. Social Media Deep Scan (Username based)
+        // We scan for both username and email (extraction) types
+        if (type === 'username' || type === 'email') {
+            this.scanSocialPlatforms(username, grid);
+        }
+    }
+
+    async scanGravatar(email, grid) {
+        try {
+            const hash = CryptoJS.MD5(email.toLowerCase().trim()).toString();
+            const response = await fetch(`https://en.gravatar.com/${hash}.json`);
+            if (response.ok) {
+                const data = await response.json();
+                const profile = data.entry[0];
+                this.injectLiveCard(grid, {
+                    platform: "Gravatar Integration",
+                    icon: "fingerprint",
+                    avatar: profile.thumbnailUrl,
+                    name: profile.displayName || profile.preferredUsername || "Email Registered",
+                    username: profile.preferredUsername || "N/A",
+                    details: [{ label: "Profile", value: profile.profileUrl, link: true }],
+                    about: profile.aboutMe || "Account linked to this email found."
+                });
+            }
+        } catch(e) {}
+    }
+
+    async scanSocialPlatforms(username, grid) {
+        // Prepare a container for social results
+        const socialGridId = `social-results-${Date.now()}`;
+        const container = document.createElement('div');
+        container.className = 'col-span-1 md:col-span-2 lg:col-span-3 lg:col-span-4 animate-in mt-2 mb-6';
+        container.innerHTML = `
+            <div class="flex items-center gap-3 mb-4 px-2">
+                <div class="h-px flex-1 bg-gradient-to-r from-transparent via-purple-500/30 to-transparent"></div>
+                <h3 class="text-[10px] font-bold uppercase tracking-widest text-purple-400 flex items-center gap-2">
+                    <i data-lucide="shield-search" class="w-3 h-3"></i> Cross-Platform Account Scan
+                </h3>
+                <div class="h-px flex-1 bg-gradient-to-r from-transparent via-purple-500/30 to-transparent"></div>
+            </div>
+            <div id="${socialGridId}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 px-2">
+                <!-- Platform results will pop in here -->
+            </div>
+        `;
+        grid.prepend(container);
+        this.refreshIcons();
+
+        const socialGrid = document.getElementById(socialGridId);
+
+        // Run scans in parallel
+        SOCIAL_PLATFORMS.forEach(async (platform) => {
+            try {
+                const targetUrl = platform.url.replace('{query}', username);
+                // Use Microlink to check if page exists and get metadata
+                const response = await fetch(`https://api.microlink.io?url=${encodeURIComponent(targetUrl)}&screenshot=false&meta=true`);
+                const data = await response.json();
+
+                if (data.status === 'success' && data.data.title && !data.data.title.toLowerCase().includes('404')) {
+                    const profile = data.data;
+                    this.injectSocialResult(socialGrid, {
+                        ...platform,
+                        handle: username,
+                        title: profile.title,
+                        description: profile.description,
+                        image: profile.image?.url || `https://unavatar.io/${platform.id}/${username}`,
+                        stats: profile.stats || null,
+                        url: targetUrl
+                    });
+                }
+            } catch (e) {}
+        });
+    }
+
+    injectSocialResult(parent, data) {
+        const item = document.createElement('div');
+        item.className = 'glass-card p-4 rounded-xl border border-slate-800 hover:border-purple-500/50 transition-all group overflow-hidden relative flex flex-col justify-between';
+        
+        // Extract stats if possible (Instagram followers etc)
+        let statsHtml = '';
+        if (data.description && data.id === 'instagram') {
+            const match = data.description.match(/([\d.kmb]+) Followers/i);
+            if (match) {
+                statsHtml = `<div class="mt-2 py-1 px-2 bg-purple-500/10 border border-purple-500/20 rounded text-[10px] text-purple-300 w-fit">${match[0]}</div>`;
+            }
+        }
+
+        item.innerHTML = `
+            <div class="absolute -top-10 -right-10 w-24 h-24 bg-gradient-to-br ${data.color} opacity-5 blur-2xl rounded-full group-hover:opacity-20 transition-opacity"></div>
+            <div class="flex items-center gap-3 mb-3 relative z-10">
+                <img src="${data.image}" class="w-10 h-10 rounded-lg object-cover border border-slate-700" onerror="this.src='https://unavatar.io/${data.id}/${data.handle}?fallback=https://via.placeholder.com/100'">
+                <div class="min-w-0">
+                    <h4 class="font-bold text-xs text-white flex items-center gap-1.5">
+                        <i data-lucide="${data.icon}" class="w-3.5 h-3.5"></i> ${data.name}
+                    </h4>
+                    <p class="text-[10px] text-slate-500 truncate font-mono">@${data.handle}</p>
+                </div>
+            </div>
+            ${statsHtml}
+            <p class="text-[10px] text-slate-400 line-clamp-2 mt-2 leading-relaxed mb-4">
+                ${data.description || 'Account found.'}
+            </p>
+            <a href="${data.url}" target="_blank" class="w-full bg-slate-900 border border-slate-800 hover:border-purple-500/50 text-[10px] text-center py-1.5 rounded-lg transition-all text-slate-300 hover:text-white">
+                Ver Perfil
+            </a>
+        `;
+        parent.appendChild(item);
+        this.refreshIcons();
     }
 
     injectLiveCard(grid, data) {
