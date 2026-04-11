@@ -27,14 +27,14 @@ const TOOLS_CONFIG = {
     dorking: {
         title: "Deep Search & Dorking",
         icon: "search",
-        description: "Links diretos para bases de dados governamentais e dorks de alta precisão.",
+        description: "Bases de dados oficiais e motor de extração automatizada de registros.",
         template: [
-            { name: "Listas ETEC / CPS (Direto)", url: "https://classificacao.vestibulinho.etec.sp.gov.br/" },
-            { name: "Jusbrasil (Processos)", url: "https://www.jusbrasil.com.br/busca?q={query}" },
+            { name: "Listas ETEC / CPS (Direto)", url: "https://classificacao.vestibulinho.etec.sp.gov.br/", dork: 'site:classificacao.vestibulinho.etec.sp.gov.br "{query}"' },
+            { name: "Jusbrasil (Processos)", url: "https://www.jusbrasil.com.br/busca?q={query}", dork: 'site:jusbrasil.com.br "{query}"' },
+            { name: "Escavador (Histórico)", url: "https://www.escavador.com/busca?q={query}", dork: 'site:escavador.com "{query}"' },
             { name: "Diário Oficial (Consulta)", dork: '"{query}" site:imprensaoficial.com.br OR "diário oficial"' },
-            { name: "Aprovados (Dork Direto)", dork: '"{query}" site:etec.sp.gov.br OR site:cps.sp.gov.br "convocação" 2026' },
-            { name: "Escavador (Histórico)", url: "https://www.escavador.com/busca?q={query}" },
-            { name: "Documentos (PDF/DOC)", dork: '"{query}" filetype:pdf OR filetype:doc site:gov.br' }
+            { name: "Convocação / Aprovados", dork: '"{query}" "lista de convocação" OR "classificação" OR "vestibular" 2026' },
+            { name: "Registros Gov (PDF/XLS)", dork: '"{query}" filetype:pdf OR filetype:xls site:gov.br' }
         ]
     },
     email: {
