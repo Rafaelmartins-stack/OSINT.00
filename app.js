@@ -194,6 +194,13 @@ class OSINTApp {
             const cardId = `card-${Math.random().toString(36).substr(2, 9)}`;
             card.id = cardId;
 
+            const mineBtn = item.dork ? `
+                <button onclick="window.osintApp.mineDorkResults('${item.dork.split('{query}').join(query).replace(/'/g, "\\'")}', this)" 
+                    class="mt-1 inline-flex items-center justify-center gap-2 bg-purple-600/20 hover:bg-purple-600 text-purple-300 hover:text-white border border-purple-500/30 text-[10px] font-bold py-2 px-4 rounded-lg transition-all w-full">
+                    <i data-lucide="microscope" class="w-3.5 h-3.5"></i> Minerar Todos Links
+                </button>
+            ` : '';
+
             card.innerHTML = `
                 <div class="mb-3 overflow-hidden">
                     <h4 class="font-bold text-sm text-slate-200">${item.name}</h4>
