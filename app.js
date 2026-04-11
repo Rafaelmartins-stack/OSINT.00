@@ -288,6 +288,7 @@ class OSINTApp {
             this.currentIntel.bestAvatar = data.image;
         }
 
+        // Deep Search recursively if we find new leads
         this.updateIntelligenceReport();
     }
 
@@ -430,8 +431,38 @@ class OSINTApp {
                         
                         // Auto-Pivot to this new technical identity
                         this.pivotDeepScan(user.login, grid);
+
+                        // DEEP MINING: Mine public events for hidden emails in commits
+                        this.mineGitHubEvents(user.login, grid);
                     }
                 }
+            }
+        } catch(e) {}
+    }
+
+    async mineGitHubEvents(handle, grid) {
+        try {
+            const response = await fetch(`https://api.github.com/users/${handle}/events/public`);
+            if (response.ok) {
+                const events = await response.json();
+                events.forEach(event => {
+                    if (event.type === 'PushEvent' && event.payload.commits) {
+                        event.payload.commits.forEach(commit => {
+                            if (commit.author && commit.author.email) {
+                                const email = commit.author.email;
+                                if (!this.currentIntel.emails.has(email)) {
+                                    this.currentIntel.emails.add(email);
+                                    this.showToast(`Deep Mining: Extraído e-mail do histórico de código!`, 'success');
+                                    this.updateIntelligenceReport();
+                                    
+                                    // Recursive Pivot: Scan this newly found email!
+                                    const gridRes = document.getElementById('resultsGrid');
+                                    this.performLiveOSINT('email', email, gridRes);
+                                }
+                            }
+                        });
+                    }
+                });
             }
         } catch(e) {}
     }
