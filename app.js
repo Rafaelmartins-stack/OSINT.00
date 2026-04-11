@@ -457,6 +457,8 @@ class OSINTApp {
         } else if (type === 'username') {
             this.scanSocialPlatforms(username, grid);
             this.harvestSocialProfiles(query, 'instagram', grid);
+            this.harvestSocialProfiles(query, 'linkedin', grid);
+            this.harvestSocialProfiles(query, 'twitter', grid);
         }
     }
 
@@ -514,7 +516,7 @@ class OSINTApp {
             if (data.status === 'success' && data.data.title) {
                 const profile = data.data;
                 const titleLower = profile.title.toLowerCase();
-                const isNotFound = titleLower.includes('404') || titleLower.includes('not found') || titleLower.includes('login');
+                const isNotFound = titleLower.includes('404') || titleLower.includes('not found');
                 if (!isNotFound) {
                     this.injectSocialResult(grid, {
                         ...platform,
