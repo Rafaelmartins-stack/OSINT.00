@@ -169,6 +169,8 @@ class OSINTApp {
             grid.appendChild(card);
         });
 
+        this.performLiveOSINT(type, query, grid);
+
         this.addToHistory(type, query);
         this.refreshIcons();
 
@@ -182,6 +184,101 @@ class OSINTApp {
         if (this.history.length > 5) this.history = this.history.slice(0, 5);
         localStorage.setItem('osint_history', JSON.stringify(this.history));
         this.renderHistory();
+    }
+
+    async performLiveOSINT(type, query, grid) {
+        if (type === 'email') {
+            try {
+                // Gravatar API supports CORS and reveals active accounts
+                const hash = CryptoJS.MD5(query.toLowerCase().trim()).toString();
+                const response = await fetch(`https://en.gravatar.com/${hash}.json`);
+                if (response.ok) {
+                    const data = await response.json();
+                    const profile = data.entry[0];
+                    this.injectLiveCard(grid, {
+                        platform: "Gravatar Integration",
+                        icon: "fingerprint",
+                        avatar: profile.thumbnailUrl,
+                        name: profile.displayName || profile.preferredUsername || "Unknown Name",
+                        username: profile.preferredUsername || "N/A",
+                        details: [
+                            { label: "Profile Link", value: profile.profileUrl, link: true }
+                        ],
+                        about: profile.aboutMe || ""
+                    });
+                }
+            } catch(e) { console.log('Gravatar fetch failed', e) }
+        } else if (type === 'username') {
+             try {
+                // Github Open API reveals followers, etc.
+                const response = await fetch(`https://api.github.com/users/${query}`);
+                if (response.ok) {
+                    const profile = await response.json();
+                    this.injectLiveCard(grid, {
+                        platform: "GitHub Profile",
+                        icon: "code",
+                        avatar: profile.avatar_url,
+                        name: profile.name || profile.login,
+                        username: profile.login,
+                        details: [
+                            { label: "Followers", value: profile.followers },
+                            { label: "Following", value: profile.following },
+                            { label: "Public Repos", value: profile.public_repos }
+                        ],
+                        link: profile.html_url
+                    });
+                }
+            } catch(e) { console.log('Github fetch failed', e) }
+        }
+    }
+
+    injectLiveCard(grid, data) {
+        const card = document.createElement('div');
+        // Make it span all columns, distinctive border, vibrant background
+        card.className = 'glass-card p-6 rounded-xl border border-purple-500/50 result-item animate-in flex flex-col md:col-span-2 lg:col-span-3 lg:col-span-4 bg-slate-900/60 shadow-[0_0_20px_rgba(168,85,247,0.15)] relative overflow-hidden mb-4';
+        
+        let detailsHtml = '';
+        if (data.details && data.details.length) {
+             detailsHtml = `<div class="flex flex-wrap gap-4 mt-4">` + 
+                 data.details.map(d => {
+                     const val = d.link ? `<a href="${d.value}" target="_blank" class="text-purple-400 hover:text-purple-300 hover:underline break-all transition-colors">${d.value}</a>` : `<span class="font-bold text-slate-100 text-lg">${d.value}</span>`;
+                     return `<div class="bg-slate-950/80 rounded-lg px-4 py-2 border border-slate-700/50 shadow-inner flex flex-col justify-center"><span class="text-[10px] uppercase tracking-wider text-slate-400 block mb-0.5">${d.label}</span>${val}</div>`;
+                 }).join('') + `</div>`;
+        }
+
+        const iconStr = data.icon === 'code' ? `<i data-lucide="code" class="w-5 h-5"></i>` : `<i data-lucide="${data.icon}" class="w-5 h-5"></i>`;
+
+        card.innerHTML = `
+            <!-- Accent Bar -->
+            <div class="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b from-purple-500 to-cyan-500"></div>
+            
+            <div class="flex flex-col sm:flex-row items-start sm:items-center gap-5 z-10 w-full pl-2">
+                ${data.avatar ? `<div class="relative"><img src="${data.avatar}" alt="Avatar" class="w-20 h-20 rounded-full border-2 border-purple-500/30 object-cover shadow-lg shadow-purple-500/20"><div class="absolute bottom-0 right-0 w-5 h-5 bg-green-500 border-2 border-slate-900 rounded-full"></div></div>` : `<div class="w-20 h-20 rounded-full bg-slate-800 flex items-center justify-center border-2 border-slate-700 shadow-lg"><i data-lucide="user" class="w-10 h-10 text-slate-500"></i></div>`}
+                
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 text-purple-400 mb-1.5">
+                        ${iconStr}
+                        <h4 class="font-bold text-[11px] uppercase tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-cyan-400">${data.platform} <span class="bg-purple-600/20 border border-purple-500/30 text-purple-300 text-[9px] px-1.5 py-0.5 rounded ml-2 tracking-normal font-mono">LIVE INTELLIGENCE</span></h4>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <h3 class="text-2xl font-bold text-white truncate">${data.name}</h3>
+                        ${data.link ? `<a href="${data.link}" target="_blank" class="shrink-0 bg-slate-800 hover:bg-purple-600 text-slate-300 hover:text-white p-1.5 rounded-md transition-all shadow-sm group">
+                            <i data-lucide="external-link" class="w-4 h-4 group-hover:scale-110 transition-transform"></i>
+                        </a>` : ''}
+                    </div>
+                    <p class="text-sm text-slate-400 font-mono mt-1 flex items-center gap-1.5">
+                        <i data-lucide="at-sign" class="w-3.5 h-3.5"></i>${data.username}
+                    </p>
+                    
+                    ${data.about ? `<p class="text-sm text-slate-300 mt-3 bg-slate-800/40 p-3 rounded-lg border border-slate-700/50 italic w-full sm:w-11/12">"${data.about}"</p>` : ''}
+                    
+                    ${detailsHtml}
+                </div>
+            </div>
+        `;
+        // Prepend so it shows at the top of results
+        grid.prepend(card);
+        this.refreshIcons();
     }
 
     renderHistory() {
