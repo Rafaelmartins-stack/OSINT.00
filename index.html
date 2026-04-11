@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OSINT Toolkit | Intelligence Hub</title>
+    <title>OSINT Toolkit | Open Source Intelligence Hub</title>
     <meta name="description" content="A powerful, private, and fast OSINT dashboard for digital investigations.">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="style.css">
@@ -28,22 +28,19 @@
                 </div>
                 <div>
                     <h1 class="text-3xl font-bold gradient-text tracking-tight">OSINT Toolkit</h1>
-                    <p class="text-slate-400 text-sm">v1.1.0 • Professional Intelligence Hub</p>
+                    <p class="text-slate-400 text-sm">v1.0.0 • Professional Intelligence Hub</p>
                 </div>
             </div>
             
             <div class="flex items-center gap-4">
                 <div class="flex bg-slate-900/50 p-1 rounded-lg border border-slate-800">
-                    <button id="infoToggle" class="p-2 hover:bg-slate-800 rounded-md transition-colors text-slate-400 hover:text-purple-400" title="O que é OSINT?">
-                        <i data-lucide="info" class="w-5 h-5"></i>
-                    </button>
                     <button id="themeToggle" class="p-2 hover:bg-slate-800 rounded-md transition-colors">
                         <i data-lucide="moon" class="w-5 h-5"></i>
                     </button>
                 </div>
                 <button id="clearHistory" class="text-sm text-slate-400 hover:text-red-400 transition-colors flex items-center gap-2">
                     <i data-lucide="trash-2" class="w-4 h-4"></i>
-                    Limpar Histórico
+                    Clear History
                 </button>
             </div>
         </header>
@@ -54,14 +51,14 @@
             <div class="glass-card rounded-2xl p-6 flex flex-col animate-in" style="animation-delay: 0.1s">
                 <div class="flex items-center gap-3 mb-4 text-purple-400">
                     <i data-lucide="fingerprint" class="w-6 h-6"></i>
-                    <h3 class="font-semibold text-lg">Nome / User</h3>
+                    <h3 class="font-semibold text-lg">Person Search</h3>
                 </div>
-                <p class="text-slate-400 text-sm mb-6">Investigue indivíduos através de registros especializados e redes sociais.</p>
+                <p class="text-slate-400 text-sm mb-6">Investigate individuals via specialized records and deep search platforms.</p>
                 <div class="mt-auto relative">
-                    <input type="text" id="usernameInput" placeholder="Nome ou Usuário..." 
+                    <input type="text" id="usernameInput" placeholder="Name or Username..." 
                         class="w-full bg-slate-900/50 border border-slate-700 rounded-lg py-3 px-4 focus:outline-none input-glow transition-all text-sm mb-3 mono-font">
                     <button data-type="username" class="search-btn w-full bg-purple-600 hover:bg-purple-500 text-white font-medium py-2.5 rounded-lg transition-all active:scale-95 flex items-center justify-center gap-2">
-                        Investigar <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                        Execute Search <i data-lucide="arrow-right" class="w-4 h-4"></i>
                     </button>
                 </div>
             </div>
@@ -70,14 +67,14 @@
             <div class="glass-card rounded-2xl p-6 flex flex-col animate-in" style="animation-delay: 0.2s">
                 <div class="flex items-center gap-3 mb-4 text-cyan-400">
                     <i data-lucide="globe" class="w-6 h-6"></i>
-                    <h3 class="font-semibold text-lg">Domínio / IP</h3>
+                    <h3 class="font-semibold text-lg">Domain / IP</h3>
                 </div>
-                <p class="text-slate-400 text-sm mb-6">Analise hosts, registros DNS e relatórios de vulnerabilidade.</p>
+                <p class="text-slate-400 text-sm mb-6">Investigate hosts, DNS records, and vulnerability reports.</p>
                 <div class="mt-auto">
-                    <input type="text" id="domainInput" placeholder="exemplo.com ou IP..." 
+                    <input type="text" id="domainInput" placeholder="example.com or IP..." 
                         class="w-full bg-slate-900/50 border border-slate-700 rounded-lg py-3 px-4 focus:outline-none input-glow transition-all text-sm mb-3 mono-font">
                     <button data-type="domain" class="search-btn w-full bg-cyan-600 hover:bg-cyan-500 text-white font-medium py-2.5 rounded-lg transition-all active:scale-95 flex items-center justify-center gap-2">
-                        Consultar <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                        Look Up <i data-lucide="arrow-right" class="w-4 h-4"></i>
                     </button>
                 </div>
             </div>
@@ -86,14 +83,14 @@
             <div class="glass-card rounded-2xl p-6 flex flex-col animate-in" style="animation-delay: 0.3s">
                 <div class="flex items-center gap-3 mb-4 text-amber-400">
                     <i data-lucide="search" class="w-6 h-6"></i>
-                    <h3 class="font-semibold text-lg">Deep Search</h3>
+                    <h3 class="font-semibold text-lg">Google Dorks</h3>
                 </div>
-                <p class="text-slate-400 text-sm mb-6">Busca avançada em bases oficiais e documentos indexados.</p>
+                <p class="text-slate-400 text-sm mb-6">Generate advanced search queries for specific target domains.</p>
                 <div class="mt-auto">
-                    <input type="text" id="dorkInput" placeholder="Nome completo..." 
+                    <input type="text" id="dorkInput" placeholder="Domain or Full Name..." 
                         class="w-full bg-slate-900/50 border border-slate-700 rounded-lg py-3 px-4 focus:outline-none input-glow transition-all text-sm mb-3 mono-font">
                     <button data-type="dorking" class="search-btn w-full bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold py-2.5 rounded-lg transition-all active:scale-95 flex items-center justify-center gap-2">
-                        Minerar Dados <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                        Generate Dorks <i data-lucide="arrow-right" class="w-4 h-4"></i>
                     </button>
                 </div>
             </div>
@@ -102,92 +99,55 @@
             <div class="glass-card rounded-2xl p-6 flex flex-col animate-in" style="animation-delay: 0.4s">
                 <div class="flex items-center gap-3 mb-4 text-emerald-400">
                     <i data-lucide="mail" class="w-6 h-6"></i>
-                    <h3 class="font-semibold text-lg">E-mail Intel</h3>
+                    <h3 class="font-semibold text-lg">Mail Intel</h3>
                 </div>
-                <p class="text-slate-400 text-sm mb-6">Verifique validade e encontre contas vinculadas ao e-mail.</p>
+                <p class="text-slate-400 text-sm mb-6">Verify email validity and check for known data breaches.</p>
                 <div class="mt-auto">
-                    <input type="email" id="emailInput" placeholder="alvo@email.com..." 
+                    <input type="email" id="emailInput" placeholder="user@target.com..." 
                         class="w-full bg-slate-900/50 border border-slate-700 rounded-lg py-3 px-4 focus:outline-none input-glow transition-all text-sm mb-3 mono-font">
                     <button data-type="email" class="search-btn w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-2.5 rounded-lg transition-all active:scale-95 flex items-center justify-center gap-2">
-                        Validar Mail <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                        Validate Mail <i data-lucide="arrow-right" class="w-4 h-4"></i>
                     </button>
                 </div>
             </div>
         </main>
 
-        <!-- Results Section -->
+        <!-- Results Section (Initially Hidden) -->
         <section id="resultsSection" class="hidden animate-in">
             <div class="glass-card rounded-2xl p-8 mb-12">
                 <div class="flex justify-between items-center mb-6 border-b border-slate-800 pb-4">
-                    <h2 id="resultTitle" class="text-xl font-bold flex items-center gap-3 text-white">
+                    <h2 id="resultTitle" class="text-xl font-bold flex items-center gap-3">
                         <i data-lucide="list" class="w-5 h-5 text-purple-400"></i>
-                        Resultados da Análise
+                        Analysis Results
                     </h2>
                     <span id="resultMeta" class="text-xs text-slate-500 mono-font">QUERY: NONE</span>
                 </div>
+                
                 <div id="resultsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <!-- Cards de resultados injetados via JS -->
+                    <!-- Result items will be injected here -->
                 </div>
             </div>
         </section>
 
         <!-- History Footer -->
         <footer class="mt-auto border-t border-slate-800 pt-8 pb-4 animate-in" style="animation-delay: 0.5s">
-            <div class="flex items-center gap-4 mb-4 text-slate-500">
-                <i data-lucide="history" class="w-4 h-4"></i>
-                <h4 class="text-xs font-bold uppercase tracking-widest">Histórico de Pesquisa</h4>
+            <div class="flex items-center gap-4 mb-4">
+                <i data-lucide="history" class="w-4 h-4 text-slate-500"></i>
+                <h4 class="text-xs font-bold uppercase tracking-widest text-slate-500">Search History</h4>
             </div>
-            <div id="historyList" class="flex flex-wrap gap-2"></div>
+            <div id="historyList" class="flex flex-wrap gap-2">
+                <!-- History items injected here -->
+                <span class="text-xs text-slate-600 italic">No recent activity found.</span>
+            </div>
         </footer>
     </div>
 
-    <!-- OSINT Info Modal -->
-    <div id="infoModal" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm hidden opacity-0 transition-opacity duration-300">
-        <div class="glass-card max-w-2xl w-full p-8 rounded-3xl relative overflow-hidden transform scale-95 transition-transform duration-300 shadow-2xl border-purple-500/30">
-            <button id="closeInfo" class="absolute top-6 right-6 p-2 hover:bg-slate-800 rounded-full text-slate-400 hover:text-white transition-all">
-                <i data-lucide="x" class="w-6 h-6"></i>
-            </button>
-            <div class="flex items-center gap-4 mb-6">
-                <div class="p-3 bg-purple-600/20 rounded-2xl border border-purple-500/30">
-                    <i data-lucide="book-open" class="w-8 h-8 text-purple-400"></i>
-                </div>
-                <div>
-                    <h3 class="text-2xl font-bold text-white">O que é OSINT?</h3>
-                    <p class="text-purple-400/70 text-sm font-mono uppercase tracking-widest">Open Source Intelligence</p>
-                </div>
-            </div>
-            <div class="space-y-6 text-slate-300">
-                <p class="leading-relaxed">
-                    <span class="text-white font-semibold">OSINT (Inteligência de Fontes Abertas)</span> é o processo de coletar e analisar informações que estão disponíveis publicamente na internet ou em outros meios abertos.
-                </p>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div class="bg-slate-950/40 p-4 rounded-xl border border-slate-800">
-                        <h4 class="text-xs font-bold text-purple-400 uppercase tracking-widest mb-3 flex items-center gap-2">Fontes</h4>
-                        <ul class="text-xs space-y-1.5 text-slate-400">
-                            <li>Redes Sociais e Perfis</li>
-                            <li>Notícias e Artigos Online</li>
-                            <li>Documentos e Diários Oficiais</li>
-                            <li>Fóruns e Bases de Dados</li>
-                        </ul>
-                    </div>
-                    <div class="bg-slate-950/40 p-4 rounded-xl border border-slate-800">
-                        <h4 class="text-xs font-bold text-purple-400 uppercase tracking-widest mb-3 flex items-center gap-2">Uso Público</h4>
-                        <p class="text-[10px] text-slate-500 italic">O OSINT utiliza apenas dados públicos, operando sem invasões ou quebra de sistemas.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Toast Notification -->
+    <!-- Modals / Toast -->
     <div id="toast" class="fixed bottom-8 right-8 bg-slate-900 border border-slate-700 p-4 rounded-xl shadow-2xl opacity-0 transform translate-y-10 transition-all pointer-events-none z-50 flex items-center gap-3">
         <i data-lucide="info" class="w-5 h-5 text-purple-400"></i>
         <p id="toastMessage" class="text-sm font-medium"></p>
     </div>
 
     <script src="app.js"></script>
-    <script>
-        window.addEventListener('DOMContentLoaded', () => { if (typeof lucide !== 'undefined') lucide.createIcons(); });
-    </script>
 </body>
 </html>
