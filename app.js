@@ -223,11 +223,6 @@ class OSINTApp {
         this.showToast(`Planilha de investigação gerada para: ${query}`, 'success');
     }
 
-        }
-    }
-
-
-
     async mineDorkResults(dork, btn) {
         const originalHtml = btn.innerHTML;
         btn.innerHTML = `<i data-lucide="refresh-cw" class="w-3.5 h-3.5 animate-spin"></i> Minerando...`;
