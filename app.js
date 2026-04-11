@@ -48,6 +48,7 @@ const TOOLS_CONFIG = {
             { name: "Hunter.io (Company Info)", url: "https://hunter.io/try/verify/{query}" },
             { name: "Social Search (Dork)", dork: '"{query}" site:facebook.com OR site:twitter.com OR site:instagram.com' },
             { name: "Pastebin / Leaks", dork: 'site:pastebin.com OR site:github.com "{query}"' }
+        ]
     }
 };
 
