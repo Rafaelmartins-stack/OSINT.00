@@ -40,14 +40,14 @@ const TOOLS_CONFIG = {
     email: {
         title: "Mail Intel",
         icon: "mail",
-        description: "Discovery accounts and data leaks linked to an email address.",
+        description: "Encontre perfis e contas em redes sociais vinculadas diretamente a este e-mail.",
         template: [
-            { name: "EPIEOS (Account Discovery)", url: "https://epieos.com/?q={query}" },
-            { name: "HaveIBeenPwned (Leaks)", url: "https://haveibeenpwned.com/account/{query}" },
-            { name: "IntelX (Data Search)", url: "https://intelx.io/?s={query}" },
-            { name: "Hunter.io (Company Info)", url: "https://hunter.io/try/verify/{query}" },
-            { name: "Social Search (Dork)", dork: '"{query}" site:facebook.com OR site:twitter.com OR site:instagram.com' },
-            { name: "Pastebin / Leaks", dork: 'site:pastebin.com OR site:github.com "{query}"' }
+            { name: "OSINT Industries (100+ Sites)", url: "https://osint.industries/search?query={query}" },
+            { name: "EPIEOS (Google/Social Link)", url: "https://epieos.com/?q={query}" },
+            { name: "Gravatar (Verified Assets)", url: "https://en.gravatar.com/{query}" },
+            { name: "LinkedIn Identity", url: "https://www.google.com/search?q=site:linkedin.com \"{query}\"" },
+            { name: "Instagram / Social Dork", dork: '"{query}" site:instagram.com OR site:facebook.com OR site:tiktok.com' },
+            { name: "Breach Directory (Leaks)", url: "https://breachdirectory.org/search?term={query}" }
         ]
     }
 };
