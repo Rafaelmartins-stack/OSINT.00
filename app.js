@@ -404,26 +404,33 @@ class OSINTApp {
 
     async scanGitHubByEmail(email, grid) {
         try {
-            const response = await fetch(`https://api.github.com/search/users?q=${encodeURIComponent(email)}`);
+            // Commit Searching is much more powerful - it finds the author-email even in private-settings profiles
+            const response = await fetch(`https://api.github.com/search/commits?q=author-email:${encodeURIComponent(email)}`, {
+                headers: { 'Accept': 'application/vnd.github.cloak-preview+json' }
+            });
             if (response.ok) {
                 const data = await response.json();
                 if (data.total_count > 0) {
-                    const user = data.items[0];
-                    this.injectSocialResult(grid, {
-                        id: 'github',
-                        name: 'GitHub',
-                        handle: user.login,
-                        title: `GitHub: ${user.login}`,
-                        description: `Conta vinculada ao e-mail encontrada via GitHub API.`,
-                        image: user.avatar_url,
-                        url: user.html_url,
-                        isBridgeMatch: true,
-                        color: "from-amber-400 to-orange-600",
-                        icon: "github"
-                    });
+                    const commit = data.items[0];
+                    const user = commit.author; // This contains the login/username
                     
-                    // Auto-Pivot to this new handle
-                    this.pivotDeepScan(user.login, grid);
+                    if (user) {
+                        this.injectSocialResult(grid, {
+                            id: 'github',
+                            name: 'GitHub',
+                            handle: user.login,
+                            title: `ID Técnico: ${user.login}`,
+                            description: `Vínculo técnico confirmado via código-fonte (Commit History).`,
+                            image: user.avatar_url,
+                            url: user.html_url,
+                            isBridgeMatch: true,
+                            color: "from-amber-400 to-orange-600",
+                            icon: "code"
+                        });
+                        
+                        // Auto-Pivot to this new technical identity
+                        this.pivotDeepScan(user.login, grid);
+                    }
                 }
             }
         } catch(e) {}
@@ -438,47 +445,42 @@ class OSINTApp {
     }
 
     async scanEmailCorrelations(email, grid) {
-        // Prepare container for Correlation results
-        const corrId = `correlation-results-${Date.now()}`;
-        const container = document.createElement('div');
-        container.className = 'col-span-full animate-in mt-4 mb-4 px-2';
-        container.innerHTML = `
-            <div id="${corrId}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                <!-- Direct email links will appear here -->
-            </div>
-        `;
-        grid.prepend(container);
-        const corrGrid = document.getElementById(corrId);
-
         // Targeted platforms for Email in Bio (Dork-based via Microlink)
         const targets = [
-            { id: 'instagram', site: 'instagram.com' },
-            { id: 'twitter', site: 'twitter.com' },
-            { id: 'github', site: 'github.com' }
+            { id: 'instagram', site: 'instagram.com', regex: /instagram\.com\/([a-zA-Z0-9._]+)/i },
+            { id: 'twitter', site: 'twitter.com', regex: /twitter\.com\/([a-zA-Z0-9._]+)/i },
+            { id: 'tiktok', site: 'tiktok.com', regex: /tiktok\.com\/@([a-zA-Z0-9._]+)/i }
         ];
 
         targets.forEach(async (t) => {
             try {
                 const dork = `site:${t.site} "${email}"`;
                 const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(dork)}`;
-                // We use microlink as a proxy to see if Google has a snippet with this email
                 const response = await fetch(`https://api.microlink.io?url=${encodeURIComponent(searchUrl)}&meta=true`);
                 const data = await response.json();
 
                 if (data.status === 'success' && data.data.title && !data.data.title.includes('Google Search')) {
-                    // If we find a specific page title that isn't just "Google Search", it's likely a profile
-                    this.injectSocialResult(corrGrid, {
+                    // Extract potential handle from the result URL if found
+                    const match = data.data.url.match(t.regex);
+                    const handle = match ? match[1] : "Vínculo Direto";
+
+                    this.injectSocialResult(grid, {
                         id: t.id,
                         name: t.id.charAt(0).toUpperCase() + t.id.slice(1),
-                        handle: "Vínculo Direto",
-                        title: data.data.title,
-                        description: data.data.description,
-                        image: `https://unavatar.io/${t.id}/${email}`,
+                        handle: handle,
+                        title: `Vínculo: ${data.data.title}`,
+                        description: `Deteção por varredura de metadados: "${data.data.description.substring(0, 100)}..."`,
+                        image: `https://unavatar.io/${t.id}/${handle}`,
                         url: data.data.url,
                         isEmailMatch: true,
                         color: "from-emerald-500 to-teal-600",
-                        icon: "mail-check"
+                        icon: "mail-search"
                     });
+
+                    // If we found a real handle, pivot to it!
+                    if (handle !== "Vínculo Direto") {
+                        this.pivotDeepScan(handle, grid);
+                    }
                 }
             } catch (e) {}
         });
