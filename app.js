@@ -57,7 +57,11 @@ const SOCIAL_PLATFORMS = [
     { id: 'twitter', name: 'Twitter/X', url: 'https://twitter.com/{query}', icon: 'twitter', color: 'from-blue-400 to-blue-600' },
     { id: 'tiktok', name: 'TikTok', url: 'https://www.tiktok.com/@{query}', icon: 'music', color: 'from-slate-900 to-slate-700' },
     { id: 'github', name: 'GitHub', url: 'https://github.com/{query}', icon: 'github', color: 'from-slate-800 to-black' },
-    { id: 'pinterest', name: 'Pinterest', url: 'https://www.pinterest.com/{query}/', icon: 'pin', color: 'from-red-600 to-red-500' }
+    { id: 'linkedin', name: 'LinkedIn', url: 'https://www.linkedin.com/in/{query}', icon: 'linkedin', color: 'from-blue-700 to-blue-800' },
+    { id: 'twitch', name: 'Twitch', url: 'https://www.twitch.tv/{query}', icon: 'video', color: 'from-purple-600 to-purple-700' },
+    { id: 'pinterest', name: 'Pinterest', url: 'https://www.pinterest.com/{query}/', icon: 'pin', color: 'from-red-600 to-red-500' },
+    { id: 'youtube', name: 'YouTube', url: 'https://www.youtube.com/@{query}', icon: 'youtube', color: 'from-red-700 to-red-800' },
+    { id: 'behance', name: 'Behance', url: 'https://www.behance.net/{query}', icon: 'image', color: 'from-blue-500 to-blue-600' }
 ];
 
 class OSINTApp {
@@ -613,15 +617,17 @@ class OSINTApp {
                         const profile = data.data;
                         const titleLower = profile.title.toLowerCase();
                         
-                        // Strict filtering
                         const isNotFound = titleLower.includes('404') || 
-                                        titleLower.includes('page not found') || 
-                                        titleLower.includes('página não encontrada') || 
-                                        titleLower.includes('content not available') || 
-                                        titleLower.includes('couldn\'t find this account') ||
-                                        titleLower.includes('visit tiktok to discover') ||
-                                        (platform.id === 'twitter' && profile.title === 'X') ||
-                                        (platform.id === 'instagram' && !profile.title.includes('• Instagram'));
+                                         titleLower.includes('page not found') || 
+                                         titleLower.includes('página não encontrada') || 
+                                         titleLower.includes('content not available') || 
+                                         titleLower.includes('couldn\'t find this account') ||
+                                         titleLower.includes('visit tiktok to discover') ||
+                                         titleLower.includes('buy this domain') ||
+                                         (platform.id === 'twitter' && profile.title === 'X') ||
+                                         (platform.id === 'instagram' && !profile.title.includes('• Instagram')) ||
+                                         (platform.id === 'tiktok' && !profile.title.includes('TikTok')) ||
+                                         (platform.id === 'linkedin' && (titleLower.includes('google search') || titleLower.includes('pre-auth')));
 
                         if (!isNotFound) {
                             const realName = this.extractRealName(profile.title, platform.id);
@@ -633,8 +639,8 @@ class OSINTApp {
                                 description: profile.description,
                                 image: profile.image?.url || `https://unavatar.io/${platform.id}/${variant}`,
                                 url: targetUrl,
-                                // Force Bridge style for all confirmed items
-                                isBridgeMatch: isConfirmed || platform.id === 'github',
+                                // ONLY Force Bridge style if isConfirmed is truly true (Email Bridge detected it)
+                                isBridgeMatch: isConfirmed,
                                 color: isConfirmed ? "from-amber-400 to-orange-600" : platform.color,
                                 icon: isConfirmed ? "link-2" : platform.icon
                             };
