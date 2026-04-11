@@ -453,6 +453,7 @@ class OSINTApp {
         if (type === 'email') {
             this.scanGravatar(query, grid);
             this.scanEmailCorrelations(query, grid);
+            this.scanGitHubByEmail(query, grid);
         } else if (type === 'username') {
             this.scanSocialPlatforms(username, grid);
             this.harvestSocialProfiles(query, 'instagram', grid);
@@ -552,6 +553,69 @@ class OSINTApp {
         grid.prepend(card);
         this.refreshIcons();
         this.parseIntel(data.name, data);
+    }
+
+    async scanEmailCorrelations(email, grid) {
+        try {
+            // Find social profiles that mention the email
+            const dork = `"${email}" site:instagram.com OR site:facebook.com OR site:linkedin.com OR site:twitter.com`;
+            const searchUrl = `https://duckduckgo.com/html/?q=${encodeURIComponent(dork)}`;
+            const response = await fetch(`https://api.microlink.io?url=${encodeURIComponent(searchUrl)}&data.results.selector=.result__title&data.results.type=list&data.results.attr=href`);
+            const data = await response.json();
+
+            if (data.status === 'success' && data.data.results) {
+                const links = [...new Set(data.data.results)];
+                links.slice(0, 5).forEach(async (encodedLink) => {
+                    const link = decodeURIComponent(encodedLink.split('uddg=')[1]?.split('&')[0] || encodedLink);
+                    if (link.startsWith('http')) {
+                        const metaRes = await fetch(`https://api.microlink.io?url=${encodeURIComponent(link)}&meta=true`);
+                        const metaData = await metaRes.json();
+                        if (metaData.status === 'success') {
+                            const profile = metaData.data;
+                            const platform = SOCIAL_PLATFORMS.find(p => link.includes(p.id));
+                            if (platform) {
+                                this.injectSocialResult(grid, {
+                                    ...platform,
+                                    handle: link.split('/').filter(p => p).pop().split('?')[0],
+                                    title: profile.title,
+                                    realName: this.extractRealName(profile.title, platform.id),
+                                    description: profile.description,
+                                    image: profile.image?.url || `https://unavatar.io/${platform.id}/${email}`,
+                                    url: link,
+                                    color: "from-blue-400 to-indigo-600"
+                                });
+                            }
+                        }
+                    }
+                });
+            }
+        } catch (e) {}
+    }
+
+    async scanGitHubByEmail(email, grid) {
+        try {
+            // Unofficial bridge to find GitHub users by email
+            const response = await fetch(`https://api.github.com/search/users?q=${encodeURIComponent(email)}`);
+            const data = await response.json();
+            if (data.items && data.items.length > 0) {
+                data.items.slice(0, 2).forEach(async (user) => {
+                    const profileRes = await fetch(user.url);
+                    const userData = await profileRes.json();
+                    this.injectSocialResult(grid, {
+                        id: 'github',
+                        name: 'GitHub',
+                        icon: 'github',
+                        handle: user.login,
+                        title: userData.name || user.login,
+                        realName: userData.name,
+                        description: userData.bio || 'Desenvolvedor identificado via e-mail.',
+                        image: user.avatar_url,
+                        url: user.html_url,
+                        color: "from-slate-800 to-black"
+                    });
+                });
+            }
+        } catch (e) {}
     }
 
     async scanGravatar(email, grid) {
