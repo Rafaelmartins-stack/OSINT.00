@@ -122,12 +122,6 @@ class OSINTApp {
             return;
         }
 
-        // Generate and show variations for potential handles
-        if (type === 'username' || type === 'email') {
-            const handle = this.extractUsername(query);
-            this.renderVariations(handle, inputId);
-        }
-
         this.executeSearch(type, query);
     }
 
@@ -147,31 +141,7 @@ class OSINTApp {
         return Array.from(variants);
     }
 
-    renderVariations(handle, inputId) {
-        const inputEl = document.getElementById(inputId);
-        let varContainer = document.getElementById('variantContainer');
-        
-        if (!varContainer) {
-            varContainer = document.createElement('div');
-            varContainer.id = 'variantContainer';
-            varContainer.className = 'mt-3 flex flex-wrap gap-2 animate-in';
-            inputEl.parentNode.appendChild(varContainer);
-        }
-        
-        const variants = this.generateVariations(handle);
-        varContainer.innerHTML = `
-            <span class="text-[10px] text-slate-500 uppercase tracking-tighter w-full mb-1 flex items-center gap-1">
-                <i data-lucide="sparkles" class="w-3 h-3"></i> Sugestões de Variação:
-            </span>
-            ${variants.map(v => `
-                <button onclick="document.getElementById('${inputId}').value='${v}'; window.osintApp.handleSearch('${inputId.replace('Input', '')}')" 
-                    class="text-[10px] bg-slate-900 border border-slate-800 hover:border-purple-500/50 px-2 py-0.5 rounded transition-all text-slate-400 hover:text-purple-300">
-                    ${v}
-                </button>
-            `).join('')}
-        `;
-        this.refreshIcons();
-    }
+
 
     executeSearch(type, query) {
         const config = TOOLS_CONFIG[type];
@@ -324,6 +294,10 @@ class OSINTApp {
     }
 
     async scanSocialPlatforms(username, grid) {
+        // Remove manual variation chips if they left artifacts
+        const oldVars = document.getElementById('variantContainer');
+        if (oldVars) oldVars.remove();
+
         // Prepare a container for social results
         const socialGridId = `social-results-${Date.now()}`;
         const container = document.createElement('div');
@@ -332,7 +306,7 @@ class OSINTApp {
             <div class="flex items-center gap-3 mb-4 px-2">
                 <div class="h-px flex-1 bg-gradient-to-r from-transparent via-purple-500/30 to-transparent"></div>
                 <h3 class="text-[10px] font-bold uppercase tracking-widest text-purple-400 flex items-center gap-2">
-                    <i data-lucide="shield-search" class="w-3 h-3"></i> Cross-Platform Account Scan
+                    <i data-lucide="shield-search" class="w-3 h-3"></i> Cross-Platform Account Scan (Fuzzy Mode)
                 </h3>
                 <div class="h-px flex-1 bg-gradient-to-r from-transparent via-purple-500/30 to-transparent"></div>
             </div>
@@ -344,43 +318,48 @@ class OSINTApp {
         this.refreshIcons();
 
         const socialGrid = document.getElementById(socialGridId);
+        
+        // Generate main variations to scan automatically
+        const variants = this.generateVariations(username);
+        variants.unshift(username); // Search exact match first
 
-        // Run scans in parallel
-        SOCIAL_PLATFORMS.forEach(async (platform) => {
-            try {
-                const targetUrl = platform.url.replace('{query}', username);
-                // Use Microlink to check if page exists and get metadata
-                const response = await fetch(`https://api.microlink.io?url=${encodeURIComponent(targetUrl)}&screenshot=false&meta=true`);
-                const data = await response.json();
+        // Scan all variants across all platforms
+        variants.forEach((variant) => {
+            SOCIAL_PLATFORMS.forEach(async (platform) => {
+                try {
+                    const targetUrl = platform.url.replace('{query}', variant);
+                    const response = await fetch(`https://api.microlink.io?url=${encodeURIComponent(targetUrl)}&screenshot=false&meta=true`);
+                    const data = await response.json();
 
-                if (data.status === 'success' && data.data.title) {
-                    const profile = data.data;
-                    const titleLower = profile.title.toLowerCase();
-                    
-                    // Strict filtering of "Not Found" / Placeholder pages
-                    const isNotFound = titleLower.includes('404') || 
-                                     titleLower.includes('page not found') || 
-                                     titleLower.includes('página não encontrada') || 
-                                     titleLower.includes('content not available') || 
-                                     titleLower.includes('couldn\'t find this account') ||
-                                     titleLower.includes('visit tiktok to discover') ||
-                                     (platform.id === 'twitter' && profile.title === 'X') ||
-                                     (platform.id === 'instagram' && !profile.title.includes('• Instagram'));
+                    if (data.status === 'success' && data.data.title) {
+                        const profile = data.data;
+                        const titleLower = profile.title.toLowerCase();
+                        
+                        // Strict filtering
+                        const isNotFound = titleLower.includes('404') || 
+                                        titleLower.includes('page not found') || 
+                                        titleLower.includes('página não encontrada') || 
+                                        titleLower.includes('content not available') || 
+                                        titleLower.includes('couldn\'t find this account') ||
+                                        titleLower.includes('visit tiktok to discover') ||
+                                        (platform.id === 'twitter' && profile.title === 'X') ||
+                                        (platform.id === 'instagram' && !profile.title.includes('• Instagram'));
 
-                    if (!isNotFound) {
-                        const realName = this.extractRealName(profile.title, platform.id);
-                        this.injectSocialResult(socialGrid, {
-                            ...platform,
-                            handle: username,
-                            title: profile.title,
-                            realName: realName,
-                            description: profile.description,
-                            image: profile.image?.url || `https://unavatar.io/${platform.id}/${username}`,
-                            url: targetUrl
-                        });
+                        if (!isNotFound) {
+                            const realName = this.extractRealName(profile.title, platform.id);
+                            this.injectSocialResult(socialGrid, {
+                                ...platform,
+                                handle: variant, // Show the actual variation found
+                                title: profile.title,
+                                realName: realName,
+                                description: profile.description,
+                                image: profile.image?.url || `https://unavatar.io/${platform.id}/${variant}`,
+                                url: targetUrl
+                            });
+                        }
                     }
-                }
-            } catch (e) {}
+                } catch (e) {}
+            });
         });
     }
 
