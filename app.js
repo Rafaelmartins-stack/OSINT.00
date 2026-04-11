@@ -250,10 +250,12 @@ class OSINTApp {
                 const searchUrl = `https://duckduckgo.com/html/?q=${encodeURIComponent(item.dork.split('{query}').join(query))}`;
                 const response = await fetch(`https://api.microlink.io?url=${encodeURIComponent(searchUrl)}&data.results.selector=.result__title&data.results.type=list`);
                 const data = await response.json();
-                if (!data.status === 'success' || !data.data.results || data.data.results.length === 0) {
+                if (data.status !== 'success' || !data.data || !data.data.results || data.data.results.length === 0) {
                     return;
                 }
-            } catch (e) {}
+            } catch (e) {
+                // Silently continue for fallbacks
+            }
         }
 
         const dorkString = item.dork ? item.dork.split('{query}').join(query) : '';
@@ -267,16 +269,16 @@ class OSINTApp {
         ` : '';
 
         const card = document.createElement('div');
-        card.className = 'glass-card p-4 rounded-xl result-item animate-in flex flex-col justify-between h-full';
+        card.className = 'glass-card p-4 rounded-xl result-item animate-in flex flex-col justify-between h-full relative';
         card.innerHTML = `
-            <div class="mb-3 overflow-hidden">
+            <div class="mb-3 overflow-hidden relative z-10">
                 <h4 class="font-bold text-sm text-slate-200">${item.name}</h4>
                 <p class="text-[10px] text-slate-500 truncate mt-1 mono-font" title="${displayPath}">${displayPath}</p>
             </div>
-            <div class="flex flex-col gap-2 mt-auto">
+            <div class="flex flex-col gap-2 mt-auto relative z-20">
                 ${mineBtn}
                 <a href="${finalUrl}" target="_blank" rel="noopener noreferrer" 
-                    class="inline-flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-xs font-semibold py-2 px-4 rounded-lg transition-colors border border-slate-700">
+                    class="inline-flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-xs font-semibold py-2 px-4 rounded-lg transition-colors border border-slate-700 w-full">
                     Abrir Ferramenta <i data-lucide="external-link" class="w-3 h-3"></i>
                 </a>
             </div>
@@ -531,7 +533,7 @@ class OSINTApp {
         const card = document.createElement('div');
         card.className = `glass-card p-5 rounded-2xl animate-in border border-white/5 hover:border-white/20 relative overflow-hidden group`;
         card.innerHTML = `
-            <div class="absolute inset-0 bg-gradient-to-br ${data.color || 'from-purple-500/10 to-transparent'} opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <div class="absolute inset-0 bg-gradient-to-br ${data.color || 'from-purple-500/10 to-transparent'} opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
             <div class="relative z-10 flex items-start gap-4">
                 <img src="${data.image}" class="w-14 h-14 rounded-xl object-cover bg-slate-800 border border-white/10 shadow-lg" onerror="this.src='https://via.placeholder.com/150'">
                 <div class="flex-1 min-w-0">
