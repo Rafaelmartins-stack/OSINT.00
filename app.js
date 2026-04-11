@@ -25,16 +25,16 @@ const TOOLS_CONFIG = {
         ]
     },
     dorking: {
-        title: "Google Dorking",
+        title: "Deep Search & Dorking",
         icon: "search",
-        description: "Encontre nomes em listas de convocação, diários oficiais e registros acadêmicos do governo.",
+        description: "Links diretos para bases de dados governamentais e dorks de alta precisão.",
         template: [
-            { name: "Convocação ETEC / CPS", dork: '"{query}" site:etec.sp.gov.br OR site:cps.sp.gov.br "convocação" OR "lista" 2026' },
-            { name: "Pesquisa Jusbrasil", dork: '"{query}" site:jusbrasil.com.br' },
-            { name: "Diário Oficial SP/BR", dork: '"{query}" site:imprensaoficial.com.br OR "diário oficial"' },
-            { name: "Lista de Aprovados", dork: '"{query}" "lista de aprovados" OR "classificação" OR "vestibular"' },
-            { name: "Registros Gov / SP", dork: '"{query}" site:gov.br OR site:sp.gov.br' },
-            { name: "Arquivos (PDF/DOC)", dork: '"{query}" filetype:pdf OR filetype:doc OR filetype:xls' }
+            { name: "Listas ETEC / CPS (Direto)", url: "https://classificacao.vestibulinho.etec.sp.gov.br/" },
+            { name: "Jusbrasil (Processos)", url: "https://www.jusbrasil.com.br/busca?q={query}" },
+            { name: "Diário Oficial (Consulta)", dork: '"{query}" site:imprensaoficial.com.br OR "diário oficial"' },
+            { name: "Aprovados (Dork Direto)", dork: '"{query}" site:etec.sp.gov.br OR site:cps.sp.gov.br "convocação" 2026' },
+            { name: "Escavador (Histórico)", url: "https://www.escavador.com/busca?q={query}" },
+            { name: "Documentos (PDF/DOC)", dork: '"{query}" filetype:pdf OR filetype:doc site:gov.br' }
         ]
     },
     email: {
