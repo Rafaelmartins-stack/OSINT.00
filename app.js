@@ -83,6 +83,7 @@ class OSINTApp {
         this.renderHistory();
     }
 
+    init() {
         this.setupEventListeners();
         this.renderHistory();
         this.applyTheme();
