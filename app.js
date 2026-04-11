@@ -191,9 +191,6 @@ class OSINTApp {
                 displayPath = dorkString;
             }
 
-            const cardId = `card-${Math.random().toString(36).substr(2, 9)}`;
-            card.id = cardId;
-
             const mineBtn = item.dork ? `
                 <button onclick="window.osintApp.mineDorkResults('${item.dork.split('{query}').join(query).replace(/'/g, "\\'")}', this)" 
                     class="mt-1 inline-flex items-center justify-center gap-2 bg-purple-600/20 hover:bg-purple-600 text-purple-300 hover:text-white border border-purple-500/30 text-[10px] font-bold py-2 px-4 rounded-lg transition-all w-full">
@@ -206,26 +203,15 @@ class OSINTApp {
                     <h4 class="font-bold text-sm text-slate-200">${item.name}</h4>
                     <p class="text-[10px] text-slate-500 truncate mt-1 mono-font" title="${displayPath}">${displayPath}</p>
                 </div>
-                <div id="status-${cardId}" class="mb-3 hidden">
-                    <div class="flex items-center gap-2 text-[10px] text-emerald-400/70 italic">
-                        <i data-lucide="loader-2" class="w-3 h-3 animate-spin"></i> Buscando registro direto...
-                    </div>
-                </div>
                 <div class="flex flex-col gap-2 mt-auto">
-                    <div id="direct-link-${cardId}"></div>
                     ${mineBtn}
                     <a href="${finalUrl}" target="_blank" rel="noopener noreferrer" 
                         class="inline-flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-xs font-semibold py-2 px-4 rounded-lg transition-colors border border-slate-700">
-                        Abrir no Google <i data-lucide="search" class="w-3 h-3"></i>
+                        Abrir Ferramenta <i data-lucide="external-link" class="w-3 h-3"></i>
                     </a>
                 </div>
             `;
             grid.appendChild(card);
-
-            if (item.dork) {
-                const dorkString = item.dork.split('{query}').join(query);
-                this.huntTopRecord(dorkString, cardId);
-            }
         });
 
         this.performLiveOSINT(type, query, grid);
@@ -240,37 +226,7 @@ class OSINTApp {
         }
     }
 
-    async huntTopRecord(dork, cardId) {
-        const statusEl = document.getElementById(`status-${cardId}`);
-        const linkContainer = document.getElementById(`direct-link-${cardId}`);
-        if (statusEl) statusEl.classList.remove('hidden');
-        this.refreshIcons();
 
-        try {
-            const searchUrl = `https://duckduckgo.com/html/?q=${encodeURIComponent(dork)}`;
-            const response = await fetch(`https://api.microlink.io?url=${encodeURIComponent(searchUrl)}&data.results.selector=.result__title&data.results.type=list&data.results.attr=href`);
-            const data = await response.json();
-
-            if (data.status === 'success' && data.data.results && data.data.results.length > 0) {
-                const encodedLink = data.data.results[0];
-                const link = decodeURIComponent(encodedLink.split('uddg=')[1]?.split('&')[0] || encodedLink);
-                
-                if (link.startsWith('http')) {
-                    if (statusEl) statusEl.classList.add('hidden');
-                    if (linkContainer) {
-                        linkContainer.innerHTML = `
-                            <a href="${link}" target="_blank" class="mb-2 w-full bg-emerald-500 hover:bg-emerald-600 text-white text-[11px] font-black py-3 rounded-lg flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 animate-pulse">
-                                <i data-lucide="file-check" class="w-4 h-4"></i> VER DOCUMENTO DIRETO
-                            </a>
-                        `;
-                        this.refreshIcons();
-                    }
-                }
-            }
-        } catch (e) {} finally {
-            if (statusEl) statusEl.classList.add('hidden');
-        }
-    }
 
     async mineDorkResults(dork, btn) {
         const originalHtml = btn.innerHTML;
