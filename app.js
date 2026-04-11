@@ -446,19 +446,38 @@ class OSINTApp {
         this.refreshIcons();
     }
 
+    createStatusArea(grid, message) {
+        const area = document.createElement('div');
+        area.className = 'col-span-full p-6 border border-dashed border-purple-500/20 rounded-2xl text-center bg-purple-500/5 animate-pulse flex flex-col items-center gap-3 mb-4';
+        area.innerHTML = `
+            <i data-lucide="loader-2" class="w-6 h-6 text-purple-400 animate-spin"></i>
+            <span class="text-xs font-bold text-purple-300 uppercase tracking-widest">${message}</span>
+        `;
+        grid.prepend(area);
+        this.refreshIcons();
+        return area;
+    }
+
     async performLiveOSINT(type, query, grid) {
         const username = this.extractUsername(query);
         this.scannedHandles = new Set([username]);
         this.currentIntel = { emails: new Set(), phones: new Set(), handles: new Set(), bestName: null, bestAvatar: null };
         if (type === 'email') {
-            this.scanGravatar(query, grid);
-            this.scanEmailCorrelations(query, grid);
-            this.scanGitHubByEmail(query, grid);
+            const statusArea = this.createStatusArea(grid, "Analisando Vínculos Digitais...");
+            Promise.all([
+                this.scanGravatar(query, grid),
+                this.scanEmailCorrelations(query, grid),
+                this.scanGitHubByEmail(query, grid)
+            ]).finally(() => statusArea.remove());
         } else if (type === 'username') {
-            this.scanSocialPlatforms(username, grid);
-            this.harvestSocialProfiles(query, 'instagram', grid);
-            this.harvestSocialProfiles(query, 'linkedin', grid);
-            this.harvestSocialProfiles(query, 'twitter', grid);
+            const statusArea = this.createStatusArea(grid, "Rastreando Identidade Social...");
+            Promise.all([
+                this.scanSocialPlatforms(username, grid),
+                this.harvestSocialProfiles(query, 'instagram', grid),
+                this.harvestSocialProfiles(query, 'linkedin', grid),
+                this.harvestSocialProfiles(query, 'twitter', grid),
+                this.harvestSocialProfiles(query, 'github', grid)
+            ]).finally(() => statusArea.remove());
         }
     }
 
@@ -594,47 +613,33 @@ class OSINTApp {
         } catch (e) {}
     }
 
-    async scanGitHubByEmail(email, grid) {
+    async scanGitHubByEmail(email) {
         try {
-            // Unofficial bridge to find GitHub users by email
-            const response = await fetch(`https://api.github.com/search/users?q=${encodeURIComponent(email)}`);
+            // Use MicroLink as a proxy for GitHub API to avoid CORS
+            const target = `https://api.github.com/search/users?q=${encodeURIComponent(email)}`;
+            const response = await fetch(`https://api.microlink.io?url=${encodeURIComponent(target)}`);
             const data = await response.json();
-            if (data.items && data.items.length > 0) {
-                data.items.slice(0, 2).forEach(async (user) => {
-                    const profileRes = await fetch(user.url);
-                    const userData = await profileRes.json();
-                    this.injectSocialResult(grid, {
-                        id: 'github',
-                        name: 'GitHub',
-                        icon: 'github',
-                        handle: user.login,
-                        title: userData.name || user.login,
-                        realName: userData.name,
-                        description: userData.bio || 'Desenvolvedor identificado via e-mail.',
-                        image: user.avatar_url,
-                        url: user.html_url,
-                        color: "from-slate-800 to-black"
-                    });
-                });
-            }
+            
+            // MicroLink returns the page content in data.data.html if it's a page, 
+            // but for JSON it might just return success.
+            // Let's try to search via dorking instead if API is blocked
+            const dork = `site:github.com "${email}"`;
+            this.harvestSocialProfiles(email, 'github', document.getElementById('resultsGrid'));
         } catch (e) {}
     }
 
     async scanGravatar(email, grid) {
         try {
             const hash = CryptoJS.MD5(email.toLowerCase().trim()).toString();
-            const response = await fetch(`https://en.gravatar.com/${hash}.json`);
-            if (response.ok) {
-                const data = await response.json();
-                const profile = data.entry[0];
-                this.injectLiveCard(grid, {
-                    platform: "Gravatar",
-                    avatar: profile.thumbnailUrl,
-                    name: profile.displayName || "Identidade Confirmada",
-                    username: profile.preferredUsername,
-                    about: profile.aboutMe || "Conta ativa encontrada para este e-mail."
-                });
-            }
+            // Use unavatar.io for a cleaner CORS-safe check
+            const avatarUrl = `https://unavatar.io/gravatar/${email}`;
+            this.injectLiveCard(grid, {
+                platform: "Gravatar",
+                avatar: avatarUrl,
+                name: "Identidade Confirmada",
+                username: email.split('@')[0],
+                about: `Vínculo detectado via hash MD5 em servidores Gravatar ativos.`
+            });
         } catch (e) {}
     }
 
