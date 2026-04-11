@@ -62,13 +62,18 @@ const SOCIAL_PLATFORMS = [
 
 class OSINTApp {
     constructor() {
-        this.history = [];
-        try {
-            this.history = JSON.parse(localStorage.getItem('osint_history')) || [];
-        } catch(e) { console.error("History fail", e); }
-        
+        this.history = JSON.parse(localStorage.getItem('osint_history') || '[]');
+        this.currentIntel = {
+            emails: new Set(),
+            phones: new Set(),
+            handles: new Set(),
+            bestName: null,
+            bestAvatar: null,
+            location: null
+        };
         this.currentTheme = localStorage.getItem('osint_theme') || 'dark';
         this.init();
+        this.renderHistory();
     }
 
     init() {
@@ -258,9 +263,129 @@ class OSINTApp {
         }
     }
 
+    // --- Intelligence Parsing Engine ---
+    parseIntel(source, data) {
+        const text = `${data.title} ${data.description}`.toLowerCase();
+        
+        // Extract Emails
+        const emails = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g);
+        if (emails) emails.forEach(e => this.currentIntel.emails.add(e));
+
+        // Extract Brazilian Phones
+        const phones = text.match(/(?:\(?\d{2}\)?\s?)?9\d{4}[-\s]?\d{4}/g);
+        if (phones) phones.forEach(p => this.currentIntel.phones.add(p));
+
+        // Extract handles (@name)
+        const handles = text.match(/@([a-zA-Z0-9._]+)/g);
+        if (handles) handles.forEach(h => this.currentIntel.handles.add(h));
+
+        // Identity
+        if (data.realName && (!this.currentIntel.bestName || data.realName.length > this.currentIntel.bestName.length)) {
+            this.currentIntel.bestName = data.realName;
+        }
+        if (data.image && !this.currentIntel.bestAvatar) {
+            this.currentIntel.bestAvatar = data.image;
+        }
+
+        this.updateIntelligenceReport();
+    }
+
+    updateIntelligenceReport() {
+        let reportContainer = document.getElementById('intelligenceReport');
+        if (!reportContainer) {
+            reportContainer = document.createElement('div');
+            reportContainer.id = 'intelligenceReport';
+            reportContainer.className = 'col-span-full order-last mt-8 animate-in';
+            const grid = document.getElementById('resultsGrid');
+            if (grid) grid.appendChild(reportContainer);
+        }
+
+        const emailList = Array.from(this.currentIntel.emails);
+        const phoneList = Array.from(this.currentIntel.phones);
+        const handleList = Array.from(this.currentIntel.handles);
+
+        if (emailList.length === 0 && phoneList.length === 0 && !this.currentIntel.bestName) {
+            reportContainer.innerHTML = '';
+            return;
+        }
+
+        reportContainer.innerHTML = `
+            <div class="glass-card p-8 rounded-2xl border-2 border-purple-500/30 bg-gradient-to-br from-slate-900 via-slate-900 to-purple-900/20 shadow-2xl relative overflow-hidden">
+                <div class="absolute top-0 right-0 p-4 opacity-10">
+                    <i data-lucide="shield-check" class="w-24 h-24 text-purple-500"></i>
+                </div>
+                
+                <div class="flex flex-col md:flex-row gap-8 items-start relative z-10">
+                    <div class="shrink-0">
+                        <img src="${this.currentIntel.bestAvatar || 'https://via.placeholder.com/150'}" class="w-32 h-32 rounded-2xl object-cover border-4 border-slate-800 shadow-2xl shadow-purple-500/20">
+                    </div>
+                    
+                    <div class="flex-1">
+                        <div class="flex items-center gap-3 mb-2">
+                             <span class="px-2 py-0.5 bg-purple-500 text-white text-[10px] font-bold rounded uppercase tracking-wider">Perfil Consolidado</span>
+                        </div>
+                        <h2 class="text-3xl font-black text-white mb-2">${this.currentIntel.bestName || 'Identidade em Analise'}</h2>
+                        
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-6">
+                            <div>
+                                <h4 class="text-[10px] text-slate-500 uppercase font-bold tracking-widest mb-3 flex items-center gap-2">
+                                    <i data-lucide="mail" class="w-3 h-3 text-purple-400"></i> Contatos de E-mail
+                                </h4>
+                                <div class="space-y-2">
+                                    ${emailList.length ? emailList.map(e => `<div class="text-sm text-slate-200 font-mono bg-slate-800/50 p-2 rounded border border-slate-700/50">${e}</div>`).join('') : '<span class="text-slate-600 text-xs italic">Nenhum email direto encontrado...</span>'}
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <h4 class="text-[10px] text-slate-500 uppercase font-bold tracking-widest mb-3 flex items-center gap-2">
+                                    <i data-lucide="phone" class="w-3 h-3 text-purple-400"></i> Telefonia / WhatsApp
+                                </h4>
+                                <div class="space-y-2">
+                                    ${phoneList.length ? phoneList.map(p => `
+                                        <div class="flex items-center justify-between bg-slate-800/50 p-2 rounded border border-slate-700/50">
+                                            <span class="text-sm text-slate-200 font-mono">${p}</span>
+                                            <a href="https://wa.me/${p.replace(/\D/g, '')}" target="_blank" class="text-emerald-400 hover:text-emerald-300 transition-colors">
+                                                <i data-lucide="message-circle" class="w-4 h-4"></i>
+                                            </a>
+                                        </div>
+                                    `).join('') : '<span class="text-slate-600 text-xs italic">Nenhum telefone direto encontrado...</span>'}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-8 pt-6 border-t border-slate-800/50">
+                            <h4 class="text-[10px] text-slate-500 uppercase font-bold tracking-widest mb-3">Próximos Passos de Investigação</h4>
+                            <div class="flex flex-wrap gap-2">
+                                <button onclick="window.osintApp.pivotToPersonSearch('${(this.currentIntel.bestName || "").replace(/'/g, "\\'")}')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] rounded transition-all border border-slate-700 flex items-center gap-2">
+                                    <i data-lucide="search" class="w-3 h-3"></i> Pesquisa Jurídica
+                                </button>
+                                ${emailList.map(e => `
+                                    <button onclick="document.getElementById('emailInput').value='${e}'; window.osintApp.handleSearch('email')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] rounded transition-all border border-slate-700 flex items-center gap-2">
+                                        <i data-lucide="mail" class="w-3 h-3"></i> Validar ${e.split('@')[0]}...
+                                    </button>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        this.refreshIcons();
+    }
+
     async performLiveOSINT(type, query, grid) {
         const username = this.extractUsername(query);
         
+        // Reset local intel for a fresh scan
+        this.currentIntel = {
+            emails: new Set(),
+            phones: new Set(),
+            handles: new Set(),
+            bestName: null,
+            bestAvatar: null,
+            location: null
+        };
+
         // 1. Email Specific: Gravatar
         if (type === 'email') {
             this.scanGravatar(query, grid);
@@ -347,7 +472,7 @@ class OSINTApp {
 
                         if (!isNotFound) {
                             const realName = this.extractRealName(profile.title, platform.id);
-                            this.injectSocialResult(socialGrid, {
+                            const resultData = {
                                 ...platform,
                                 handle: variant, // Show the actual variation found
                                 title: profile.title,
@@ -355,7 +480,10 @@ class OSINTApp {
                                 description: profile.description,
                                 image: profile.image?.url || `https://unavatar.io/${platform.id}/${variant}`,
                                 url: targetUrl
-                            });
+                            };
+                            
+                            this.injectSocialResult(socialGrid, resultData);
+                            this.parseIntel(platform.id, resultData);
                         }
                     }
                 } catch (e) {}
