@@ -200,6 +200,45 @@ class OSINTApp {
         return query;
     }
 
+    extractRealName(title, id) {
+        if (!title) return null;
+        let name = title;
+        // Instagram: "Full Name (@username) • Instagram photos"
+        if (id === 'instagram') {
+            const match = title.match(/^(.*?) \(@/i);
+            if (match) name = match[1];
+        }
+        // Twitter: "Username (@handle) / X"
+        else if (id === 'twitter') {
+            const match = title.match(/^(.*?) \(@/i);
+            if (match) name = match[1];
+        }
+        // TikTok: "TikTok - @handle - Full Name" or similar
+        else if (id === 'tiktok') {
+            const parts = title.split(' - ');
+            if (parts.length > 2) name = parts[parts.length - 1];
+        }
+        
+        // Clean up common suffixes
+        name = name.replace(/ • Instagram.*/i, '')
+                   .replace(/ \| GitHub/i, '')
+                   .replace(/ \/ X/i, '')
+                   .trim();
+        
+        // If the "name" is just the username or generic, return null
+        if (name.toLowerCase().includes('instagram') || name.toLowerCase().includes('twitter') || name.length < 2) return null;
+        return name;
+    }
+
+    pivotToPersonSearch(name) {
+        const input = document.getElementById('usernameInput');
+        if (input) {
+            input.value = name;
+            this.handleSearch('username');
+            this.showToast(`Pivoting: Investigating "${name}"`, 'success');
+        }
+    }
+
     async performLiveOSINT(type, query, grid) {
         const username = this.extractUsername(query);
         
@@ -265,17 +304,30 @@ class OSINTApp {
                 const response = await fetch(`https://api.microlink.io?url=${encodeURIComponent(targetUrl)}&screenshot=false&meta=true`);
                 const data = await response.json();
 
-                if (data.status === 'success' && data.data.title && !data.data.title.toLowerCase().includes('404')) {
+                if (data.status === 'success' && data.data.title) {
                     const profile = data.data;
-                    this.injectSocialResult(socialGrid, {
-                        ...platform,
-                        handle: username,
-                        title: profile.title,
-                        description: profile.description,
-                        image: profile.image?.url || `https://unavatar.io/${platform.id}/${username}`,
-                        stats: profile.stats || null,
-                        url: targetUrl
-                    });
+                    const titleLower = profile.title.toLowerCase();
+                    
+                    // Strict filtering of "Not Found" / Placeholder pages
+                    const isNotFound = titleLower.includes('404') || 
+                                     titleLower.includes('page not found') || 
+                                     titleLower.includes('página não encontrada') || 
+                                     titleLower.includes('content not available') || 
+                                     (platform.id === 'twitter' && profile.title === 'X') ||
+                                     (platform.id === 'instagram' && !profile.title.includes('• Instagram'));
+
+                    if (!isNotFound) {
+                        const realName = this.extractRealName(profile.title, platform.id);
+                        this.injectSocialResult(socialGrid, {
+                            ...platform,
+                            handle: username,
+                            title: profile.title,
+                            realName: realName,
+                            description: profile.description,
+                            image: profile.image?.url || `https://unavatar.io/${platform.id}/${username}`,
+                            url: targetUrl
+                        });
+                    }
                 }
             } catch (e) {}
         });
@@ -283,35 +335,53 @@ class OSINTApp {
 
     injectSocialResult(parent, data) {
         const item = document.createElement('div');
-        item.className = 'glass-card p-4 rounded-xl border border-slate-800 hover:border-purple-500/50 transition-all group overflow-hidden relative flex flex-col justify-between';
+        item.className = 'glass-card p-5 rounded-xl border border-slate-800 hover:border-purple-500/50 transition-all group overflow-hidden relative flex flex-col justify-between h-full';
         
-        // Extract stats if possible (Instagram followers etc)
         let statsHtml = '';
         if (data.description && data.id === 'instagram') {
             const match = data.description.match(/([\d.kmb]+) Followers/i);
             if (match) {
-                statsHtml = `<div class="mt-2 py-1 px-2 bg-purple-500/10 border border-purple-500/20 rounded text-[10px] text-purple-300 w-fit">${match[0]}</div>`;
+                statsHtml = `<div class="mt-2 py-1 px-2 bg-purple-500/10 border border-purple-500/20 rounded text-[10px] text-purple-300 w-fit flex items-center gap-1.5"><i data-lucide="users" class="w-3 h-3"></i> ${match[0]}</div>`;
             }
         }
 
+        const pivotBtn = data.realName ? `
+            <button onclick="window.osintApp.pivotToPersonSearch('${data.realName.replace(/'/g, "\\'")}')" 
+                class="w-full mt-3 bg-purple-600/20 hover:bg-purple-600 text-purple-300 hover:text-white border border-purple-500/30 text-[10px] font-bold py-2 rounded-lg transition-all flex items-center justify-center gap-2">
+                <i data-lucide="crosshair" class="w-3 h-3"></i> Investigar: ${data.realName}
+            </button>
+        ` : '';
+
         item.innerHTML = `
             <div class="absolute -top-10 -right-10 w-24 h-24 bg-gradient-to-br ${data.color} opacity-5 blur-2xl rounded-full group-hover:opacity-20 transition-opacity"></div>
-            <div class="flex items-center gap-3 mb-3 relative z-10">
-                <img src="${data.image}" class="w-10 h-10 rounded-lg object-cover border border-slate-700" onerror="this.src='https://unavatar.io/${data.id}/${data.handle}?fallback=https://via.placeholder.com/100'">
-                <div class="min-w-0">
-                    <h4 class="font-bold text-xs text-white flex items-center gap-1.5">
-                        <i data-lucide="${data.icon}" class="w-3.5 h-3.5"></i> ${data.name}
-                    </h4>
-                    <p class="text-[10px] text-slate-500 truncate font-mono">@${data.handle}</p>
+            
+            <div class="relative z-10">
+                <div class="flex items-center gap-4 mb-4">
+                    <div class="relative">
+                        <img src="${data.image}" class="w-12 h-12 rounded-xl object-cover border-2 border-slate-700 group-hover:border-purple-500/50 transition-colors shadow-lg" onerror="this.src='https://unavatar.io/${data.id}/${data.handle}?fallback=https://via.placeholder.com/100'">
+                        <div class="absolute -bottom-1 -right-1 p-1 bg-slate-900 rounded-lg border border-slate-800">
+                             <i data-lucide="${data.icon}" class="w-3 h-3 text-slate-300"></i>
+                        </div>
+                    </div>
+                    <div class="min-w-0">
+                        <h4 class="font-bold text-sm text-white truncate">${data.realName || data.name}</h4>
+                        <p class="text-[11px] text-slate-500 font-mono">@${data.handle}</p>
+                    </div>
                 </div>
+
+                ${statsHtml}
+
+                <p class="text-[10px] text-slate-400 line-clamp-2 mt-3 leading-relaxed">
+                    ${data.description || 'Perfil identificado e validado.'}
+                </p>
             </div>
-            ${statsHtml}
-            <p class="text-[10px] text-slate-400 line-clamp-2 mt-2 leading-relaxed mb-4">
-                ${data.description || 'Account found.'}
-            </p>
-            <a href="${data.url}" target="_blank" class="w-full bg-slate-900 border border-slate-800 hover:border-purple-500/50 text-[10px] text-center py-1.5 rounded-lg transition-all text-slate-300 hover:text-white">
-                Ver Perfil
-            </a>
+
+            <div class="mt-6 flex flex-col gap-2 relative z-10">
+                ${pivotBtn}
+                <a href="${data.url}" target="_blank" class="w-full bg-slate-800 hover:bg-slate-700 border border-slate-700 text-[10px] text-center py-2 rounded-lg transition-all text-slate-300 hover:text-white flex items-center justify-center gap-2">
+                    <i data-lucide="external-link" class="w-3 h-3"></i> Acessar Perfil
+                </a>
+            </div>
         `;
         parent.appendChild(item);
         this.refreshIcons();
@@ -435,7 +505,9 @@ class OSINTApp {
 
 // Inicialização segura
 (function() {
-    const startApp = () => new OSINTApp();
+    const startApp = () => {
+        window.osintApp = new OSINTApp();
+    };
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', startApp);
     } else {
