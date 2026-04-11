@@ -474,7 +474,8 @@ class OSINTApp {
         if (!this.scannedHandles.has(newHandle)) {
             this.scannedHandles.add(newHandle);
             this.showToast(`Pivoting: Investigating new handle "${newHandle}"`, 'success');
-            this.scanSocialPlatforms(newHandle, grid);
+            // When pivoting from a confirmed bridge, every result found is also confirmed
+            this.scanSocialPlatforms(newHandle, grid, true);
         }
     }
 
@@ -566,7 +567,7 @@ class OSINTApp {
         } catch(e) {}
     }
 
-    async scanSocialPlatforms(username, grid) {
+    async scanSocialPlatforms(username, grid, isConfirmed = false) {
         // Remove manual variation chips if they left artifacts
         const oldVars = document.getElementById('variantContainer');
         if (oldVars) oldVars.remove();
@@ -575,13 +576,17 @@ class OSINTApp {
         const socialGridId = `social-results-${Date.now()}`;
         const container = document.createElement('div');
         container.className = 'col-span-1 md:col-span-2 lg:col-span-3 lg:col-span-4 animate-in mt-2 mb-6';
+        const accentColor = isConfirmed ? "amber-500" : "purple-500";
+        const title = isConfirmed ? "VÍNCULO CONFIRMADO: REDE DE IDENTIDADE" : "Cross-Platform Account Scan (Fuzzy Mode)";
+        const icon = isConfirmed ? "shield-check" : "shield-search";
+
         container.innerHTML = `
             <div class="flex items-center gap-3 mb-4 px-2">
-                <div class="h-px flex-1 bg-gradient-to-r from-transparent via-purple-500/30 to-transparent"></div>
-                <h3 class="text-[10px] font-bold uppercase tracking-widest text-purple-400 flex items-center gap-2">
-                    <i data-lucide="shield-search" class="w-3 h-3"></i> Cross-Platform Account Scan (Fuzzy Mode)
+                <div class="h-px flex-1 bg-gradient-to-r from-transparent via-${accentColor}/30 to-transparent"></div>
+                <h3 class="text-[10px] font-bold uppercase tracking-widest text-${accentColor} flex items-center gap-2">
+                    <i data-lucide="${icon}" class="w-3 h-3"></i> ${title}
                 </h3>
-                <div class="h-px flex-1 bg-gradient-to-r from-transparent via-purple-500/30 to-transparent"></div>
+                <div class="h-px flex-1 bg-gradient-to-r from-transparent via-${accentColor}/30 to-transparent"></div>
             </div>
             <div id="${socialGridId}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 px-2">
                 <!-- Platform results will pop in here -->
@@ -592,9 +597,9 @@ class OSINTApp {
 
         const socialGrid = document.getElementById(socialGridId);
         
-        // Generate main variations to scan automatically
-        const variants = this.generateVariations(username);
-        variants.unshift(username); // Search exact match first
+        // If confirmed, search ONLY for the exact handle. If fuzzy, generate variations.
+        const variants = isConfirmed ? [username] : this.generateVariations(username);
+        if (!isConfirmed) variants.unshift(username);
 
         // Scan all variants across all platforms
         variants.forEach((variant) => {
@@ -627,7 +632,11 @@ class OSINTApp {
                                 realName: realName,
                                 description: profile.description,
                                 image: profile.image?.url || `https://unavatar.io/${platform.id}/${variant}`,
-                                url: targetUrl
+                                url: targetUrl,
+                                // Force Bridge style for all confirmed items
+                                isBridgeMatch: isConfirmed || platform.id === 'github',
+                                color: isConfirmed ? "from-amber-400 to-orange-600" : platform.color,
+                                icon: isConfirmed ? "link-2" : platform.icon
                             };
                             
                             this.injectSocialResult(socialGrid, resultData);
