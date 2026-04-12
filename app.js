@@ -1,6 +1,6 @@
 /**
- * OSINT Toolkit - Deep Discovery Engine v1.6
- * Stability: Aggressive Social Link Correlation
+ * OSINT Toolkit - Email Pivot Engine v1.7
+ * Specialization: Pure Email-to-Account Correlation
  */
 
 const TOOLS_CONFIG = {
@@ -10,10 +10,9 @@ const TOOLS_CONFIG = {
         template: [
             { name: "Escavador", url: "https://www.escavador.com/busca?q={query}" },
             { name: "Jusbrasil", url: "https://www.jusbrasil.com.br/busca?q={query}" },
-            { name: "LinkedIn", url: "https://www.google.com/search?q=site:linkedin.com/in/ \"{query}\"" },
-            { name: "Instagram Dork", dork: 'site:instagram.com "{query}"' },
-            { name: "Twitter/X Dork", dork: 'site:twitter.com "{query}"' },
-            { name: "FaceCheck.ID (Photo Search)", url: "https://facecheck.id/" }
+            { name: "LinkedIn", dork: 'site:linkedin.com/in/ "{query}"' },
+            { name: "Instagram", dork: 'site:instagram.com "{query}"' },
+            { name: "FaceCheck.ID", url: "https://facecheck.id/" }
         ]
     },
     domain: {
@@ -21,30 +20,33 @@ const TOOLS_CONFIG = {
         icon: "globe",
         template: [
             { name: "Who.is", url: "https://who.is/whois/{query}" },
-            { name: "VirusTotal", url: "https://www.virustotal.com/gui/search/{query}" },
-            { name: "Shodan", url: "https://www.shodan.io/search?query={query}" }
+            { name: "VirusTotal", url: "https://www.virustotal.com/gui/search/{query}" }
         ]
     },
     dorking: {
         title: "Deep Search & Dorking",
         icon: "search",
         template: [
-            { name: "ETEC / CPS", dork: 'site:vestibulinho.etec.sp.gov.br OR site:cps.sp.gov.br "{query}"' },
-            { name: "IFSP / Federal", dork: 'site:ifsp.edu.br "{query}" "resultado"' },
-            { name: "Diários Oficiais", dork: 'site:in.gov.br "{query}"' },
-            { name: "Transparência Brasil", dork: 'site:transparencia.gov.br "{query}"' },
-            { name: "Empresas / CNPJ", dork: '"{query}" site:cnpj.biz OR site:casadosdados.com.br' }
+            { name: "ETEC / CPS", dork: 'site:vestibulinho.etec.sp.gov.br "{query}"' },
+            { name: "Institutos Federais", dork: 'site:edu.br "{query}" "resultado"' },
+            { name: "Diários Oficiais", dork: 'site:in.gov.br "{query}"' }
         ]
     },
     email: {
-        title: "Mail Intel",
+        title: "Mail Intel (Account Discovery)",
         icon: "mail",
         template: [
-            { name: "EPIEOS", dork: '"{query}" site:epieos.com' },
-            { name: "OSINT Industries", dork: '"{query}" site:osint.industries' },
-            { name: "Gravatar", url: "https://en.gravatar.com/{query}" },
+            // HEAVY DORKS FOR EMAIL REGISTRATION
+            { name: "GitHub Accounts", dork: 'site:github.com "{query}"' },
+            { name: "Instagram Profiles", dork: 'site:instagram.com "{query}"' },
+            { name: "Facebook Profiles", dork: 'site:facebook.com "{query}"' },
+            { name: "Twitter/X Linking", dork: 'site:twitter.com "{query}"' },
             { name: "LinkedIn Identity", dork: 'site:linkedin.com "{query}"' },
-            { name: "Breach Directory", url: "https://breachdirectory.org/search?term={query}" }
+            { name: "Gravatar (Global)", url: "https://en.gravatar.com/{query}" },
+            { name: "EPIEOS (Direct Search)", url: "https://epieos.com/?q={query}" },
+            { name: "OSINT Industries (Direct Search)", url: "https://osint.industries/search?query={query}" },
+            { name: "Leak Check (Google Dork)", dork: '"{query}" password OR "data breach" OR leak' },
+            { name: "Social Media Master Dork", dork: '"{query}" (site:instagram.com OR site:facebook.com OR site:tiktok.com OR site:twitter.com)' }
         ]
     }
 };
@@ -55,20 +57,13 @@ const SOCIAL_PLATFORMS = [
     { id: 'tiktok', name: 'TikTok', url: 'https://www.tiktok.com/@{query}', icon: 'music', color: 'bg-slate-800' },
     { id: 'github', name: 'GitHub', url: 'https://github.com/{query}', icon: 'github', color: 'bg-slate-700' },
     { id: 'twitch', name: 'Twitch', url: 'https://www.twitch.tv/{query}', icon: 'video', color: 'bg-purple-600' },
-    { id: 'facebook', name: 'Facebook', url: 'https://www.facebook.com/{query}', icon: 'facebook', color: 'bg-blue-600' },
     { id: 'youtube', name: 'YouTube', url: 'https://www.youtube.com/@{query}', icon: 'youtube', color: 'bg-red-700' }
 ];
 
 class OSINTApp {
     constructor() {
-        try {
-            const saved = localStorage.getItem('osint_history');
-            this.history = saved ? JSON.parse(saved) : [];
-            this.currentTheme = localStorage.getItem('osint_theme') || 'dark';
-        } catch (e) {
-            this.history = [];
-            this.currentTheme = 'dark';
-        }
+        this.history = JSON.parse(localStorage.getItem('osint_history') || '[]');
+        this.currentTheme = localStorage.getItem('osint_theme') || 'dark';
         this.discoveredLinks = new Set();
     }
 
@@ -87,9 +82,6 @@ class OSINTApp {
         document.querySelectorAll('.search-btn').forEach(btn => {
             btn.onclick = (e) => this.handleSearch(e.currentTarget.getAttribute('data-type'));
         });
-
-        const clearBtn = document.getElementById('clearHistory');
-        if (clearBtn) clearBtn.onclick = () => this.clearHistory();
 
         const themeBtn = document.getElementById('themeToggle');
         if (themeBtn) themeBtn.onclick = () => this.toggleTheme();
@@ -124,143 +116,101 @@ class OSINTApp {
         const titleEl = document.getElementById('resultTitle');
         
         if (resultsSection) resultsSection.classList.remove('hidden');
-        if (metaEl) metaEl.textContent = `VINCULAÇÕES PARA: ${query.toUpperCase()}`;
+        if (metaEl) metaEl.textContent = `Vínculos do E-mail: ${query.toUpperCase()}`;
         if (titleEl) titleEl.innerHTML = `<i data-lucide="${config.icon}" class="w-4 h-4"></i> ${config.title}`;
 
         if (grid) {
-            grid.innerHTML = `<div id="loader" class="col-span-full py-10 flex flex-col items-center justify-center gap-4 animate-pulse">
+            grid.innerHTML = `<div id="loader" class="col-span-full py-20 flex flex-col items-center justify-center gap-4 animate-pulse">
                 <i data-lucide="shield-search" class="w-12 h-12 text-blue-500"></i>
-                <p class="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500">Minerando Contas e Perfis Relacionados...</p>
+                <p class="text-[10px] font-black uppercase tracking-[0.5em] text-slate-500 text-center px-4">Analisando Registros de Contas para este E-mail...</p>
             </div>`;
             this.refreshIcons();
         }
 
         this.discoveredLinks.clear();
 
-        // Standard tool cards
-        config.template.forEach(item => this.renderBaseCard(item, query, grid));
+        // 1. Kick off Dork Miner (THE MOST POWERFUL PART FOR EMAILS)
+        config.template.forEach(item => {
+            this.runExtraction(item, query, grid);
+        });
 
-        // Start Deep Scans
-        if (type === 'email') {
-            this.scanEmailSocialLinks(query, grid);
-            this.scanGravatar(query, grid);
-        } else if (type === 'username') {
-            const handle = query.includes('@') ? query.split('@')[0] : query;
-            SOCIAL_PLATFORMS.forEach(p => this.verifyAccountByHandle(p, handle, grid));
-        }
+        // 2. Pivot search for Gravatar if it's an email
+        if (type === 'email') this.scanGravatar(query, grid);
 
         this.addToHistory(query);
-        this.showToast(`Motor de rastreamento ativado.`);
     }
 
-    /**
-     * SEARCH SITES FOR THE EMAIL STRING
-     * This finds accounts that aren't just prefix/handle based.
-     */
-    async scanEmailSocialLinks(email, grid) {
-        const handle = email.split('@')[0];
-        
-        // 1. Direct handle-based verification (Fast)
-        SOCIAL_PLATFORMS.forEach(p => this.verifyAccountByHandle(p, handle, grid));
+    async runExtraction(item, query, grid) {
+        let url = item.url ? item.url.replace('{query}', encodeURIComponent(query)) : `https://www.google.com/search?q=${encodeURIComponent(item.dork.replace('{query}', query))}`;
 
-        // 2. Deep Dork Investigation for the FULL EMAIL
-        // Search specific platforms for the email string
-        SOCIAL_PLATFORMS.forEach(async (platform) => {
+        // Just add the basic indicator
+        this.addToolStatus(item, url, grid);
+
+        if (item.dork) {
             try {
-                const searchDork = `site:${new URL(platform.url).hostname} "${email}"`;
+                const searchDork = item.dork.replace('{query}', query);
                 const api = `https://api.microlink.io?url=${encodeURIComponent(`https://duckduckgo.com/html/?q=${encodeURIComponent(searchDork)}`)}&data.results.selector=.result__a&data.results.type=list&data.results.attr=href`;
                 
                 const response = await fetch(api);
                 const data = await response.json();
                 
-                if (data.status === 'success' && data.data.results && data.data.results.length > 0) {
-                    data.data.results.forEach(link => {
-                        if (!this.discoveredLinks.has(link)) {
+                if (data.status === 'success' && data.data.results) {
+                    data.data.results.forEach(linkUrl => {
+                        const link = decodeURIComponent(linkUrl.split('uddg=')[1]?.split('&')[0] || linkUrl);
+                        if (link.startsWith('http') && !this.discoveredLinks.has(link)) {
                             this.discoveredLinks.add(link);
-                            this.renderInferredAccount(platform, link, email, grid);
+                            this.renderFoundAccount(link, item.name, grid);
                         }
                     });
                 }
             } catch (e) {}
-        });
+        }
     }
 
-    async verifyAccountByHandle(platform, handle, grid) {
-        const url = platform.url.replace('{query}', handle);
-        try {
-            const api = `https://api.microlink.io?url=${encodeURIComponent(url)}&meta=true`;
-            const response = await fetch(api);
-            const data = await response.json();
-            
-            if (data.status === 'success' && data.data.title && !data.data.title.toLowerCase().includes('404')) {
-                this.renderAccountCard(platform, handle, data.data, grid);
-            }
-        } catch (e) {}
-    }
-
-    renderAccountCard(platform, handle, meta, grid) {
+    addToolStatus(item, url, grid) {
         const loader = document.getElementById('loader');
         if (loader) loader.remove();
 
         const card = document.createElement('div');
-        card.className = "col-span-2 glass-card p-4 rounded-xl border border-blue-500/30 hover:border-blue-500 transition-all animate-in flex items-center gap-4 group cursor-default";
+        card.className = "bg-slate-900/60 border border-slate-800 p-3 rounded-lg flex items-center justify-between gap-3 animate-in hover:border-slate-700 transition-all";
         card.innerHTML = `
-            <div class="relative flex-shrink-0">
-                <img src="${meta.image?.url || `https://unavatar.io/${platform.id}/${handle}`}" 
-                     class="w-14 h-14 rounded-xl object-cover ring-2 ring-blue-500/20 group-hover:ring-blue-500/50 transition-all shadow-xl">
-                <div class="absolute -bottom-1 -right-1 ${platform.color} p-1.5 rounded-lg shadow-2xl border border-white/10">
-                    <i data-lucide="${platform.icon}" class="w-3 h-3 text-white"></i>
-                </div>
+            <div class="min-w-0">
+                <p class="text-[9px] font-black text-slate-400 uppercase truncate">${item.name}</p>
+                <div class="flex items-center gap-1.5 mt-0.5"><span class="w-1 h-1 rounded-full bg-blue-500 animate-pulse"></span> <span class="text-[7px] text-blue-400 uppercase font-black">Escaneando Registro</span></div>
             </div>
-            <div class="min-w-0 flex-1">
-                <h4 class="text-xs font-black text-white truncate uppercase tracking-tighter">${meta.title || platform.name}</h4>
-                <p class="text-[9px] text-blue-400 font-mono mt-0.5">@${handle}</p>
-                <div class="flex items-center gap-3 mt-2">
-                    <a href="${platform.url.replace('{query}', handle)}" target="_blank" class="text-[9px] text-slate-100 font-bold hover:text-blue-400 transition-colors bg-blue-500/10 px-2 py-1 rounded">Ver Perfil</a>
-                    <span class="text-[7px] text-slate-500 font-mono uppercase font-black">Link Confirmado</span>
-                </div>
-            </div>
-        `;
-        grid.prepend(card);
-        this.refreshIcons();
-    }
-
-    renderInferredAccount(platform, link, email, grid) {
-        const loader = document.getElementById('loader');
-        if (loader) loader.remove();
-
-        const card = document.createElement('div');
-        card.className = "col-span-2 glass-card p-4 rounded-xl border border-emerald-500/30 animate-in flex items-center gap-4 cursor-default";
-        card.innerHTML = `
-            <div class="relative flex-shrink-0">
-                <img src="https://unavatar.io/${platform.id}/${email}" 
-                     class="w-14 h-14 rounded-xl object-cover ring-2 ring-emerald-500/20 shadow-xl">
-                <div class="absolute -bottom-1 -right-1 ${platform.color} p-1.5 rounded-lg border border-white/10">
-                    <i data-lucide="${platform.icon}" class="w-3 h-3 text-white"></i>
-                </div>
-            </div>
-            <div class="min-w-0 flex-1">
-                <h4 class="text-xs font-black text-white truncate uppercase tracking-tighter">Vínculo Detectado</h4>
-                <p class="text-[9px] text-emerald-400 font-mono mt-0.5">${email}</p>
-                <div class="flex items-center gap-3 mt-2">
-                    <a href="${link}" target="_blank" class="text-[9px] text-slate-100 font-bold hover:text-emerald-400 transition-colors bg-emerald-500/10 px-2 py-1 rounded">Abrir Perfil</a>
-                    <span class="text-[7px] text-slate-500 font-mono uppercase font-black">Descoberta Profunda</span>
-                </div>
-            </div>
-        `;
-        grid.prepend(card);
-        this.refreshIcons();
-    }
-
-    renderBaseCard(item, query, grid) {
-        let url = item.url ? item.url.replace('{query}', encodeURIComponent(query)) : `https://www.google.com/search?q=${encodeURIComponent(item.dork.replace('{query}', query))}`;
-        const card = document.createElement('div');
-        card.className = "bg-slate-900 border border-slate-800 p-2.5 rounded-lg flex items-center justify-between gap-3 animate-in hover:border-slate-700 transition-all";
-        card.innerHTML = `
-            <div class="min-w-0"><p class="text-[9px] font-black text-slate-500 uppercase truncate">${item.name}</p></div>
-            <a href="${url}" target="_blank"><i data-lucide="external-link" class="w-3.5 h-3.5 text-slate-600 hover:text-white"></i></a>
+            <a href="${url}" target="_blank"><i data-lucide="external-link" class="w-3.5 h-3.5 text-slate-500 hover:text-white"></i></a>
         `;
         grid.appendChild(card);
+        this.refreshIcons();
+    }
+
+    renderFoundAccount(link, sourceName, grid) {
+        const hostname = new URL(link).hostname;
+        const platform = SOCIAL_PLATFORMS.find(p => hostname.includes(p.id)) || { id: 'globe', name: hostname, color: 'bg-slate-700', icon: 'link' };
+        
+        const card = document.createElement('div');
+        card.className = "col-span-2 glass-card p-4 rounded-xl border border-emerald-500/40 hover:border-emerald-500 transition-all animate-in flex items-center gap-4 group";
+        card.innerHTML = `
+            <div class="relative flex-shrink-0">
+                <div class="w-14 h-14 rounded-xl bg-emerald-500/10 flex items-center justify-center ring-2 ring-emerald-500/20 shadow-2xl">
+                    <i data-lucide="${platform.icon || 'link'}" class="w-6 h-6 text-emerald-400"></i>
+                </div>
+                <div class="absolute -bottom-1 -right-1 ${platform.color || 'bg-emerald-600'} p-1.5 rounded-lg border border-white/10 shadow-lg">
+                    <i data-lucide="check-circle" class="w-2.5 h-2.5 text-white"></i>
+                </div>
+            </div>
+            <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-2">
+                    <h4 class="text-xs font-black text-white truncate uppercase tracking-tighter">Conta Vinculada Detectada</h4>
+                </div>
+                <p class="text-[9px] text-emerald-400 font-mono mt-0.5 truncate">${hostname}</p>
+                <div class="flex items-center gap-3 mt-2">
+                    <a href="${link}" target="_blank" class="text-[9px] text-slate-100 font-bold bg-emerald-600/20 px-3 py-1.5 rounded border border-emerald-500/30 hover:bg-emerald-600 transition-all">Ver Link Direto</a>
+                    <span class="text-[7px] text-slate-500 font-mono uppercase font-black">Match via ${sourceName}</span>
+                </div>
+            </div>
+        `;
+        grid.prepend(card);
         this.refreshIcons();
     }
 
@@ -270,16 +220,14 @@ class OSINTApp {
             const response = await fetch(`https://en.gravatar.com/${hash}.json`);
             if (response.ok) {
                 const profile = (await response.json()).entry[0];
-                const loader = document.getElementById('loader');
-                if (loader) loader.remove();
                 const card = document.createElement('div');
-                card.className = "col-span-2 glass-card p-4 rounded-xl border border-purple-500/30 animate-in flex items-center gap-4 bg-purple-500/5";
+                card.className = "col-span-2 glass-card p-4 rounded-xl border border-purple-500/40 animate-in flex items-center gap-4 bg-purple-500/5";
                 card.innerHTML = `
-                    <div class="relative"><img src="${profile.thumbnailUrl}" class="w-14 h-14 rounded-full ring-2 ring-purple-500/30"></div>
+                    <div class="relative flex-shrink-0"><img src="${profile.thumbnailUrl}" class="w-14 h-14 rounded-xl ring-2 ring-purple-500/30 object-cover shadow-2xl"></div>
                     <div class="min-w-0 flex-1">
-                        <h4 class="text-xs font-black text-white truncate uppercase">${profile.displayName || 'Usuário Gravatar'}</h4>
-                        <p class="text-[9px] text-purple-400 font-mono">${email}</p>
-                        <a href="${profile.profileUrl}" target="_blank" class="text-[8px] text-slate-500 hover:text-white underline font-bold mt-1 block">Identidade Digital Global</a>
+                        <h4 class="text-xs font-black text-white truncate uppercase tracking-tighter">Perfil Global Detectado</h4>
+                        <p class="text-[9px] text-purple-400 font-mono">${profile.displayName || email}</p>
+                        <a href="${profile.profileUrl}" target="_blank" class="text-[9px] text-slate-100 font-bold bg-purple-600/20 px-3 py-1.5 rounded border border-purple-500/30 mt-2 block w-max">Abrir Identidade Digital</a>
                     </div>
                 `;
                 grid.prepend(card);
@@ -289,7 +237,7 @@ class OSINTApp {
     }
 
     addToHistory(query) {
-        this.history = [query, ...this.history.filter(h => h !== query)].slice(0, 10);
+        this.history = [query, ...this.history.filter(h => h !== query)].slice(0, 5);
         localStorage.setItem('osint_history', JSON.stringify(this.history));
         this.renderHistory();
     }
@@ -297,15 +245,12 @@ class OSINTApp {
     renderHistory() {
         const list = document.getElementById('historyList');
         if (list) {
-            if (this.history.length === 0) list.innerHTML = `<span class="text-xs text-slate-600 italic">Nenhum registro.</span>`;
-            else list.innerHTML = this.history.map(h => `<button class="bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg text-[9px] text-slate-500 hover:text-white transition-all hover:bg-slate-800 uppercase font-bold">${h}</button>`).join(' ');
+            list.innerHTML = this.history.map(h => `<button class="bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg text-[9px] text-slate-500 hover:text-white transition-all uppercase font-black">${h}</button>`).join(' ');
         }
     }
 
     applyTheme() {
         document.body.classList.toggle('light-mode', this.currentTheme === 'light');
-        const icon = document.querySelector('#themeToggle i');
-        if (icon) icon.setAttribute('data-lucide', this.currentTheme === 'light' ? 'sun' : 'moon');
         this.refreshIcons();
     }
 
@@ -314,26 +259,9 @@ class OSINTApp {
         localStorage.setItem('osint_theme', this.currentTheme);
         this.applyTheme();
     }
-
-    clearHistory() {
-        this.history = [];
-        localStorage.removeItem('osint_history');
-        this.renderHistory();
-    }
-
-    showToast(msg) {
-        const toast = document.getElementById('toast');
-        const msgEl = document.getElementById('toastMessage');
-        if (toast && msgEl) {
-            msgEl.textContent = msg;
-            toast.style.opacity = '1';
-            toast.style.transform = 'translateY(0)';
-            setTimeout(() => { toast.style.opacity = '0'; toast.style.transform = 'translateY(20px)'; }, 3000);
-        }
-    }
 }
 
-// Full Start
+// Global Launcher
 window.addEventListener('load', () => {
     window.app = new OSINTApp();
     window.app.init();
