@@ -291,7 +291,6 @@ class OSINTApp {
             const data = await response.json();
             if (data.status === 'success' && data.data.results) {
                 const results = data.data.results;
-                this.showToast(`Sucesso! Encontrados ${results.length} links diretos.`, 'success');
                 let findingsGrid = document.getElementById('deepFindingsGrid');
                 if (!findingsGrid) {
                     const section = document.createElement('div');
@@ -366,12 +365,8 @@ class OSINTApp {
             this.scanEmailCorrelations(query, grid);
             this.scanGitHubByEmail(query, grid);
         }
-        
-        // For 'username' OR 'dorking' (name search), we perform deep social harvesting
         if (type === 'username' || type === 'dorking') {
             if (type === 'username') this.scanSocialPlatforms(username, grid);
-            
-            // DEEP HARVEST: Crawl indices for ALL linked accounts available online
             this.harvestSocialProfiles(query, 'instagram', grid);
             this.harvestSocialProfiles(query, 'linkedin', grid);
             this.harvestSocialProfiles(query, 'twitch', grid);
@@ -401,7 +396,6 @@ class OSINTApp {
                             const profile = profileData.data;
                             const titleLower = profile.title.toLowerCase();
                             const descLower = (profile.description || '').toLowerCase();
-                            
                             const isNotFound = titleLower.includes('404') || 
                                              titleLower.includes('page not found') || 
                                              descLower.includes('não perca o que está acontecendo') ||
