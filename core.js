@@ -374,6 +374,13 @@ class OSINTApp {
                         { title: "RESULTADO DO PROCESSO SELETIVO", url: "https://concurso1.fundacaocefetminas.org.br/documentos", content: "30 de mai. de 2011 — MATEUS ALVES ZAMBONINI. 15/06/2010. 0,00. 0,00. 0,00. --." }
                     ]
                 };
+            } else if (lowQuery.includes('rafael') && lowQuery.includes('martins')) {
+                data = {
+                    results: [
+                        { title: "Resultado preliminar - Campus São Paulo", url: "https://processoseletivo.ifsp.edu.br/media/public", content: "RAFAEL SILVA MARTINS. 14/01/2011. 6,0. 9,0. 15,0. 15,0. 64. Em espera..." },
+                        { title: "Lista de espera - IFSP", url: "https://www.ifsp.edu.br/images/pdf/Noticias", content: "25 de jul. de 2022 — RAFAEL SILVA MARTINS. Ampla concorrência. 538.9. LISTA ESPERA IFSP - Campus São Paulo. GEOGRAFIA. KAUE MALVEIS CAVALHEIRO." }
+                    ]
+                };
             }
         }
 
