@@ -292,13 +292,8 @@ class OSINTApp {
     }
 
     async performNativeDiscovery(query, grid, config) {
-        const isMail = query.includes('@');
         let searchString = `"${query}"`;
         
-        if (!isMail && !query.includes('.') && query.includes(' ')) {
-            searchString = `"${query}" (filetype:pdf OR filetype:xls OR site:sp.gov.br OR site:jusbrasil.com.br O site:escavador.com)`;
-        }
-
         const serperKey = localStorage.getItem('osint_serper_key');
         let data = null;
 
