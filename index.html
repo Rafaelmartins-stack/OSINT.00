@@ -9,12 +9,12 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="main.css?v=4.5.3">
+    <link rel="stylesheet" href="main.css?v=4.6.0">
     <script src="https://unpkg.com/lucide@0.400.0/dist/umd/lucide.min.js" defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" defer></script>
     <!-- PDF Scraper Core -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-    <script src="core.js?v=4.5.3" defer></script>
+    <script src="core.js?v=4.6.0" defer></script>
 </head>
 <body class="bg-slate-950 text-slate-100">
     <!-- Background Decor -->
@@ -39,6 +39,9 @@
             </div>
             
             <div class="flex items-center gap-4">
+                <button id="settingsBtn" class="flex items-center gap-2 bg-indigo-600/20 hover:bg-indigo-600/40 border border-indigo-500/30 text-indigo-300 px-3 py-1.5 rounded-lg transition-all text-xs font-black uppercase tracking-widest shadow-[0_0_15px_rgba(99,102,241,0.2)]">
+                    <i data-lucide="key" class="w-4 h-4"></i> API
+                </button>
                 <div class="flex bg-slate-900/50 p-1 rounded-lg border border-slate-800">
                     <button id="themeToggle" class="p-2 hover:bg-slate-800 rounded-md transition-colors">
                         <i data-lucide="moon" class="w-5 h-5"></i>
@@ -176,6 +179,30 @@
     <div id="toast" class="fixed bottom-8 right-8 bg-slate-900 border border-slate-700 p-4 rounded-xl shadow-2xl opacity-0 transform translate-y-10 transition-all pointer-events-none z-50 flex items-center gap-3">
         <i data-lucide="info" class="w-5 h-5 text-purple-400"></i>
         <p id="toastMessage" class="text-sm font-medium"></p>
+    <!-- API Settings Modal -->
+    <div id="settingsModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="glass-card max-w-md w-full bg-slate-900 border border-indigo-500/50 rounded-2xl shadow-2xl overflow-hidden transform scale-95 transition-transform relative">
+            <div class="bg-indigo-600 p-4 flex items-center justify-between">
+                <h3 class="font-black text-white uppercase tracking-widest flex items-center gap-2">
+                    <i data-lucide="key" class="w-5 h-5"></i> Professional API Key
+                </h3>
+                <button id="closeSettingsBtn" class="text-white hover:text-indigo-200 transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <p class="text-xs text-slate-300 mb-4 leading-relaxed">
+                    Client-side tools are blocked from fetching Google results natively. To bypass anti-bot protection and scrape results flawlessly, please obtain a free API key from <a href="https://serper.dev" target="_blank" class="text-indigo-400 font-bold hover:underline">Serper.dev</a> (2500 free searches limit).
+                </p>
+                <div class="mb-5">
+                    <label class="block text-[10px] font-black tracking-widest text-indigo-400 uppercase mb-2">Serper.dev API Key</label>
+                    <input type="password" id="serperKeyInput" placeholder="Paste your API key here..." class="w-full bg-slate-950 border border-slate-700 rounded-lg py-3 px-4 focus:outline-none focus:border-indigo-500 input-glow transition-all text-sm mono-font text-white">
+                </div>
+                <button id="saveSettingsBtn" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-3 rounded-xl uppercase tracking-widest transition-all">
+                    Save Key & Unlock Engine
+                </button>
+            </div>
+        </div>
     </div>
 </body>
 </html>
