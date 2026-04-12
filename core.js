@@ -155,6 +155,29 @@ class OSINTApp {
         setTimeout(() => toast.classList.add('opacity-0', 'translate-y-10', 'pointer-events-none'), 3000);
     }
 
+    showAllLinksSection(show, count = 0) {
+        const section = document.getElementById('allLinksSection');
+        const countEl = document.getElementById('allLinksCount');
+        if (section) section.classList.toggle('hidden', !show);
+        if (countEl) countEl.textContent = show ? `${count} link${count === 1 ? '' : 's'}` : '';
+    }
+
+    renderAllLinks(results = []) {
+        const list = document.getElementById('allLinksList');
+        if (!list) return;
+        if (!results.length) {
+            list.innerHTML = `<p class="text-[10px] text-slate-400">Nenhum link encontrado para este nome. Tente outra pesquisa ou atualize a chave API.</p>`;
+            return;
+        }
+
+        list.innerHTML = results.map(result => `
+            <a href="${result.url}" target="_blank" class="block border border-slate-700 rounded-2xl p-4 bg-slate-950/80 hover:border-indigo-500 transition-colors text-slate-100">
+                <div class="font-semibold text-[11px] truncate">${result.title || result.url}</div>
+                <div class="text-[10px] text-slate-400 break-all mt-2">${result.url}</div>
+            </a>
+        `).join('');
+    }
+
     handleSearch(type) {
         if (type === 'scraper') {
             const nameEl = document.getElementById('scraperTargetInput');
@@ -277,6 +300,7 @@ class OSINTApp {
         }
 
         this.discoveredLinks.clear();
+        this.showAllLinksSection(false);
         this.addToHistory(query);
         this.showToast(`Scanning: ${query}`, 'info');
 
@@ -387,21 +411,28 @@ class OSINTApp {
         const loader = document.getElementById('loader');
         if (loader) loader.remove();
 
-        if (data && data.results && data.results.length > 0) {
-            const separatorHtml = `
+        if (!data || !data.results || data.results.length === 0) {
+            this.renderAllLinks([]);
+            this.showAllLinksSection(true, 0);
+            return;
+        }
+
+        this.renderAllLinks(data.results);
+        this.showAllLinksSection(true, data.results.length);
+
+        const separatorHtml = `
             <div class="col-span-full border-b border-indigo-500/30 pb-2 mb-4 mt-8 flex items-center gap-2">
                 <i data-lucide="radar" class="w-4 h-4 text-indigo-400"></i>
                 <span class="text-[10px] font-black uppercase tracking-widest text-indigo-400">Deep Web Hits (Native SERP)</span>
             </div>`;
-            grid.insertAdjacentHTML('afterbegin', separatorHtml);
+        grid.insertAdjacentHTML('afterbegin', separatorHtml);
 
-            // Render top 12 results
-            data.results.slice(0, 12).reverse().forEach(result => {
-                const isPdf = result.url.toLowerCase().endsWith('.pdf');
-                const icon = isPdf ? 'file-text' : 'link-2';
-                const color = isPdf ? 'rose' : 'indigo';
-                
-                const cardHtml = `
+        data.results.slice().reverse().forEach(result => {
+            const isPdf = result.url.toLowerCase().endsWith('.pdf');
+            const icon = isPdf ? 'file-text' : 'link-2';
+            const color = isPdf ? 'rose' : 'indigo';
+
+            const cardHtml = `
                 <div class="col-span-full md:col-span-2 lg:col-span-3 glass-card p-5 rounded-2xl border border-${color}-500/20 hover:border-${color}-500/60 hover:shadow-lg hover:shadow-${color}-500/10 transition-all flex flex-col h-full bg-slate-900/40">
                     <div class="flex items-start gap-3 mb-3">
                         <div class="p-2 bg-${color}-500/10 rounded-lg">
@@ -410,21 +441,34 @@ class OSINTApp {
                         <h4 class="text-xs font-bold text-slate-200 line-clamp-2 leading-snug" title="${result.title}">${result.title}</h4>
                     </div>
                     <p class="text-[10px] text-slate-400 font-mono mb-4 line-clamp-3 leading-relaxed flex-grow opacity-80">${result.content || 'Content restricted or unavailable.'}</p>
-                    
                     <div class="mt-auto flex justify-between items-center pt-3 border-t border-slate-800">
                         <a href="${result.url}" target="_blank" class="text-[9px] text-${color}-400 bg-${color}-500/10 px-2 py-1 rounded-md truncate max-w-[60%] hover:underline flex items-center gap-1">
                             <i data-lucide="external-link" class="w-3 h-3"></i> Open Source
                         </a>
-                        <button onclick="document.getElementById('scraperUrlInput').value='${result.url}'; document.getElementById('scraperTargetInput').value='${query}'; document.getElementById('scraperUrlInput').scrollIntoView();" class="text-[9px] font-black uppercase text-rose-400 hover:text-white transition-all flex items-center gap-1 bg-rose-500/10 hover:bg-rose-500/40 px-2 py-1 rounded-md cursor-pointer">
+                        <button type="button" class="search-result-scan text-[9px] font-black uppercase text-rose-400 hover:text-white transition-all flex items-center gap-1 bg-rose-500/10 hover:bg-rose-500/40 px-2 py-1 rounded-md cursor-pointer" data-url="${result.url}">
                             <i data-lucide="scan" class="w-3 h-3"></i> Scan
                         </button>
                     </div>
                 </div>
-                `;
-                grid.insertAdjacentHTML('afterbegin', cardHtml);
-            });
-            this.refreshIcons();
-        }
+            `;
+            const wrapper = document.createElement('div');
+            wrapper.innerHTML = cardHtml.trim();
+            const card = wrapper.firstElementChild;
+            if (card) {
+                const btn = card.querySelector('.search-result-scan');
+                if (btn) {
+                    btn.addEventListener('click', () => {
+                        const urlInput = document.getElementById('scraperUrlInput');
+                        const targetInput = document.getElementById('scraperTargetInput');
+                        if (urlInput) urlInput.value = result.url;
+                        if (targetInput) targetInput.value = query;
+                        urlInput?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    });
+                }
+                grid.insertAdjacentElement('afterbegin', card);
+            }
+        });
+        this.refreshIcons();
     }
 
     async performDiscovery(item, query) {
