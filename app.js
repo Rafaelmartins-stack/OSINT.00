@@ -84,6 +84,22 @@ class OSINTApp {
             const el = document.getElementById(id);
             if (el) el.onkeypress = (e) => { if (e.key === 'Enter') this.handleSearch(id.replace('Input', '')); };
         });
+
+        // Toggle Theme
+        const themeBtn = document.getElementById('themeToggle');
+        if (themeBtn) themeBtn.onclick = () => {
+            this.currentTheme = this.currentTheme === 'dark' ? 'light' : 'dark';
+            localStorage.setItem('osint_theme', this.currentTheme);
+            this.applyTheme();
+        };
+
+        // Clear History
+        const clearBtn = document.getElementById('clearHistory');
+        if (clearBtn) clearBtn.onclick = () => {
+            this.history = [];
+            localStorage.removeItem('osint_history');
+            this.renderHistory();
+        };
     }
 
     handleSearch(type) {
@@ -171,19 +187,29 @@ class OSINTApp {
             const searchApi = `https://api.microlink.io?url=${encodeURIComponent(`https://duckduckgo.com/html/?q=${encodeURIComponent(searchDork)}`)}&data.results.selector=.result__a&data.results.type=list&data.results.attr=href`;
             
             const response = await fetch(searchApi, { signal: controller.signal });
-            if (!response.ok) throw new Error('API limit or block');
+            if (!response.ok) throw new Error('API Throttled or Blocked');
             
             const data = await response.json();
-            if (data.status === 'success' && data.data.results) {
+            if (data.status === 'success' && data.data.results && data.data.results.length > 0) {
                 for (const encodedLink of data.data.results) {
                     const link = decodeURIComponent(encodedLink.split('uddg=')[1]?.split('&')[0] || encodedLink);
                     if (link.startsWith('http') && !this.discoveredLinks.has(link)) {
                         await this.processResultLink(link, confirmedGrid, controller.signal);
                     }
                 }
+            } else if (data.status === 'success') {
+                // If the search succeeded but returned no results, logging it silently
             }
         } catch (e) {
-            console.error(`Discovery failed for ${item.name}:`, e);
+            console.warn(`Search failed for ${item.name}:`, e.message);
+            // Show a subtle indicator in status grid that this dork failed
+            const statusGrid = document.getElementById('statusGrid');
+            if (statusGrid) {
+                const errSpan = document.createElement('span');
+                errSpan.className = "text-[7px] text-red-500/50 uppercase font-bold";
+                errSpan.textContent = ` (fail)`;
+                statusGrid.lastChild?.appendChild(errSpan);
+            }
         } finally {
             clearTimeout(timeoutId);
         }
@@ -282,7 +308,32 @@ class OSINTApp {
 
     renderHistory() {
         const list = document.getElementById('historyList');
-        if (list) list.innerHTML = this.history.map(h => `<span class="bg-indigo-950/20 border border-indigo-500/20 px-3 py-1.5 rounded-lg text-[9px] text-indigo-400 uppercase font-black">${h}</span>`).join(' ');
+        if (!list) return;
+        
+        if (this.history.length === 0) {
+            list.innerHTML = `<span class="text-xs text-slate-600 italic">No recent activity found.</span>`;
+            return;
+        }
+
+        list.innerHTML = this.history.map(h => `
+            <button class="history-item bg-indigo-950/20 hover:bg-indigo-600/30 border border-indigo-500/20 px-3 py-1.5 rounded-lg text-[9px] text-indigo-400 hover:text-white uppercase font-black transition-all" data-query="${h}">
+                ${h}
+            </button>
+        `).join(' ');
+
+        list.querySelectorAll('.history-item').forEach(btn => {
+            btn.onclick = () => {
+                const query = btn.getAttribute('data-query');
+                // Detect type (simple heuristic)
+                const type = query.includes('@') ? 'email' : (query.includes('.') ? 'domain' : 'username');
+                const inputId = `${type}Input`;
+                const inputEl = document.getElementById(inputId);
+                if (inputEl) {
+                    inputEl.value = query;
+                    this.executeSearch(type, query);
+                }
+            };
+        });
     }
 
     applyTheme() { document.body.classList.toggle('light-mode', this.currentTheme === 'light'); }
