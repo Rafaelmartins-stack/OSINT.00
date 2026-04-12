@@ -84,10 +84,12 @@ class OSINTApp {
     }
 
     handleSearch(type) {
-        const id = type === 'email' ? 'emailInput' : (type === 'username' ? 'usernameInput' : (type === 'dork' ? 'dorkInput' : `${type}Input`));
+        const id = type === 'email' ? 'emailInput' : 
+                   (type === 'username' ? 'usernameInput' : 
+                   (type === 'dorking' ? 'dorkInput' : `${type}Input`));
         const inputEl = document.getElementById(id);
         if (!inputEl || !inputEl.value.trim()) return;
-        this.executeSearch(type === 'dork' ? 'dorking' : type, inputEl.value.trim());
+        this.executeSearch(type, inputEl.value.trim());
     }
 
     executeSearch(type, query) {
