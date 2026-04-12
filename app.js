@@ -32,9 +32,14 @@ const TOOLS_CONFIG = {
             { name: "Listas ETEC / CPS (Direto)", url: "https://classificacao.vestibulinho.etec.sp.gov.br/", dork: 'site:classificacao.vestibulinho.etec.sp.gov.br "{query}"' },
             { name: "Jusbrasil (Processos)", url: "https://www.jusbrasil.com.br/busca?q={query}", dork: 'site:jusbrasil.com.br "{query}"' },
             { name: "Escavador (Histórico)", url: "https://www.escavador.com/busca?q={query}", dork: 'site:escavador.com "{query}"' },
+            { name: "LinkedIn (Perfis)", dork: 'site:linkedin.com/in/ "{query}"' },
+            { name: "Facebook (Pessoas)", dork: 'site:facebook.com "{query}"' },
             { name: "Diário Oficial (Consulta)", dork: '"{query}" site:imprensaoficial.com.br OR "diário oficial"' },
+            { name: "Portal da Transparência", dork: 'site:transparencia.gov.br "{query}"' },
+            { name: "Sinesp / Infoseg", dork: 'site:sinesp.gov.br "{query}"' },
             { name: "Convocação / Aprovados", dork: '"{query}" "lista de convocação" OR "classificação" OR "vestibular" 2026' },
-            { name: "Registros Gov (PDF/XLS)", dork: '"{query}" filetype:pdf OR filetype:xls site:gov.br' }
+            { name: "Registros Gov (PDF/XLS)", dork: '"{query}" filetype:pdf OR filetype:xls site:gov.br' },
+            { name: "Busca Global (Tudo)", dork: '"{query}" -site:twitter.com -site:facebook.com' }
         ]
     },
     email: {
@@ -224,11 +229,14 @@ class OSINTApp {
             displayPath = dorkString;
         }
 
-        if (item.dork) {
+        // For Dorking/Records, we prefer to show more than to hide
+        const isDorking = item.dork && !item.url;
+        if (item.dork && !isDorking) {
             try {
                 const searchUrl = `https://duckduckgo.com/html/?q=${encodeURIComponent(item.dork.split('{query}').join(query))}`;
                 const response = await fetch(`https://api.microlink.io?url=${encodeURIComponent(searchUrl)}&data.results.selector=.result__title&data.results.type=list`);
                 const data = await response.json();
+                // Only hide if we are absolutely sure AND it's not a primary dorking tool
                 if (!data.status === 'success' || !data.data.results || data.data.results.length === 0) return;
             } catch (e) {}
         }
@@ -323,11 +331,17 @@ class OSINTApp {
             this.scanEmailCorrelations(query, grid);
             this.scanGitHubByEmail(query, grid);
         }
-        if (type === 'username') {
-            this.scanSocialPlatforms(username, grid);
+        
+        // For 'username' OR 'dorking' (name search), we perform deep social harvesting
+        if (type === 'username' || type === 'dorking') {
+            if (type === 'username') this.scanSocialPlatforms(username, grid);
+            
+            // DEEP HARVEST: Crawl indices for ALL linked accounts available online
             this.harvestSocialProfiles(query, 'instagram', grid);
             this.harvestSocialProfiles(query, 'linkedin', grid);
             this.harvestSocialProfiles(query, 'twitch', grid);
+            this.harvestSocialProfiles(query, 'twitter', grid);
+            this.harvestSocialProfiles(query, 'github', grid);
         }
     }
 
