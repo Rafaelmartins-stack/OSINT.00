@@ -14,7 +14,10 @@ const TOOLS_CONFIG = {
             { name: "Escavador", url: "https://www.escavador.com/busca?q={query}" },
             { name: "Jusbrasil", url: "https://www.jusbrasil.com.br/busca?q={query}" },
             { name: "LinkedIn", dork: 'site:linkedin.com/in/ "{query}"' },
-            { id: 'global_person', name: "Deep Mentions", dork: '"{query}"' }
+            { id: 'gov_docs', name: "Diários e Listas (PDF)", dork: 'filetype:pdf "{query}"' },
+            { id: 'spreadsheets', name: "Planilhas de Dados (XLS/CSV)", dork: '(filetype:xls OR filetype:xlsx OR filetype:csv) "{query}"' },
+            { id: 'txt_leaks', name: "Vazamentos em Texto (TXT)", dork: 'filetype:txt "{query}"' },
+            { id: 'global_person', name: "Deep Mentions em Sites", dork: '"{query}"' }
         ]
     },
     domain: {
