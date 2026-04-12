@@ -91,10 +91,13 @@ class OSINTApp {
         });
 
         // Enter Key listeners
-        ['usernameInput', 'domainInput', 'dorkInput', 'emailInput'].forEach(id => {
+        ['usernameInput', 'domainInput', 'dorkInput', 'emailInput', 'scraperTargetInput', 'scraperUrlInput'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.addEventListener('keypress', (e) => { 
-                if (e.key === 'Enter') this.handleSearch(id.replace('Input', '')); 
+                if (e.key === 'Enter') {
+                    if (id.includes('scraper')) this.handleSearch('scraper');
+                    else this.handleSearch(id.replace('Input', '')); 
+                }
             });
         });
 
@@ -130,12 +133,102 @@ class OSINTApp {
     }
 
     handleSearch(type) {
+        if (type === 'scraper') {
+            const nameEl = document.getElementById('scraperTargetInput');
+            const urlEl = document.getElementById('scraperUrlInput');
+            if (!nameEl || !urlEl || !nameEl.value.trim() || !urlEl.value.trim()) {
+                this.showToast('Please provide both Target Name and PDF URL.', 'error');
+                return;
+            }
+            this.extractDocumentEvidence(urlEl.value.trim(), nameEl.value.trim());
+            return;
+        }
+
         const id = type === 'email' ? 'emailInput' : 
                    (type === 'username' ? 'usernameInput' : 
                    (type === 'dorking' ? 'dorkInput' : `${type}Input`));
         const inputEl = document.getElementById(id);
         if (!inputEl || !inputEl.value.trim()) return;
         this.executeSearch(type, inputEl.value.trim());
+    }
+
+    async extractDocumentEvidence(url, query) {
+        const resultsSection = document.getElementById('resultsSection');
+        const grid = document.getElementById('resultsGrid');
+        const metaEl = document.getElementById('resultMeta');
+        
+        if (resultsSection) resultsSection.classList.remove('hidden');
+        if (metaEl) metaEl.textContent = `SCRAPING: ${query.toUpperCase()}`;
+
+        if (grid) {
+            grid.innerHTML = `
+                <div id="loader" class="col-span-full py-16 flex flex-col items-center justify-center gap-4 animate-pulse">
+                    <div class="relative w-20 h-20">
+                        <div class="absolute inset-0 border-4 border-rose-500/10 rounded-full"></div>
+                        <div class="absolute inset-0 border-4 border-t-rose-500 rounded-full animate-spin"></div>
+                    </div>
+                    <p class="text-[10px] font-black uppercase tracking-[0.4em] text-rose-400">Bypassing Security & Memory-Parsing PDF...</p>
+                </div>
+            `;
+            this.refreshIcons();
+        }
+
+        this.showToast(`Scraping Document...`, 'info');
+
+        try {
+            if (!window.pdfjsLib) throw new Error("PDF Engine not loaded yet.");
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+
+            const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
+            const loadingTask = pdfjsLib.getDocument(proxyUrl);
+            const pdf = await loadingTask.promise;
+            
+            let fullText = '';
+            for(let i = 1; i <= pdf.numPages; i++) {
+                const page = await pdf.getPage(i);
+                const textContent = await page.getTextContent();
+                const pageText = textContent.items.map(item => item.str).join(' ');
+                fullText += pageText + '\\n';
+            }
+
+            const searchIndex = fullText.toLowerCase().indexOf(query.toLowerCase());
+            
+            if (searchIndex !== -1) {
+                const snippetStart = Math.max(0, searchIndex - 250);
+                const snippetEnd = Math.min(fullText.length, searchIndex + query.length + 250);
+                let snippet = fullText.substring(snippetStart, snippetEnd);
+                
+                const regex = new RegExp(`(${query.replace(/[-/\\\\^$*+?.()|[\\]{}]/g, '\\\\$&')})`, 'gi');
+                const highlightedSnippet = snippet.replace(regex, '<span class="bg-rose-500 text-white px-1 font-black rounded-sm shadow-lg shadow-rose-500/50 scale-105 inline-block">$1</span>');
+
+                grid.innerHTML = `
+                    <div class="col-span-full glass-card p-8 rounded-3xl border border-rose-500/50 bg-rose-500/5 transition-all">
+                        <div class="flex items-center justify-between mb-6">
+                            <div class="flex items-center gap-4">
+                                <i data-lucide="file-check-2" class="w-8 h-8 text-rose-400"></i>
+                                <div>
+                                    <h4 class="text-sm font-black text-rose-400 uppercase tracking-widest">EVIDENCE EXTRACTED</h4>
+                                    <a href="${url}" target="_blank" class="text-[9px] text-slate-400 font-mono hover:text-rose-300">View Original File</a>
+                                </div>
+                            </div>
+                            <span class="text-[10px] bg-slate-900 border border-rose-500/30 px-3 py-1 rounded-md text-rose-300 mono-font">Scanned ${pdf.numPages} Pages</span>
+                        </div>
+                        <div class="bg-slate-950 p-6 rounded-2xl border border-rose-500/20 shadow-inner font-mono text-[10px] text-slate-300 leading-relaxed whitespace-pre-wrap">${highlightedSnippet}</div>
+                    </div>
+                `;
+            } else {
+                throw new Error("Target name not found in the parsed document.");
+            }
+        } catch (e) {
+            grid.innerHTML = `
+                <div class="col-span-full glass-card p-6 rounded-3xl border border-red-500/40 text-center">
+                    <i data-lucide="alert-triangle" class="w-8 h-8 text-red-500 mx-auto mb-3"></i>
+                    <p class="text-xs text-slate-400 uppercase font-black mb-2">Extraction Failed</p>
+                    <p class="text-[9px] text-slate-500 font-mono">${e.message}</p>
+                </div>
+            `;
+        }
+        this.refreshIcons();
     }
 
     executeSearch(type, query) {
