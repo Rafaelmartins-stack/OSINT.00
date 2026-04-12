@@ -29,14 +29,13 @@ const TOOLS_CONFIG = {
         icon: "search",
         description: "Bases de dados oficiais e motor de extração automatizada de registros.",
         template: [
-            { name: "Listas ETEC / CTS (Direto)", url: "https://classificacao.vestibulinho.etec.sp.gov.br/", dork: 'site:classificacao.vestibulinho.etec.sp.gov.br OR site:cps.sp.gov.br "{query}" "classificação"' },
+            { name: "Listas ETEC / CTS (Direto)", url: "https://classificacao.vestibulinho.etec.sp.gov.br/", dork: 'site:classificacao.vestibulinho.etec.sp.gov.br OR site:cps.sp.gov.br "{query}"' },
+            { name: "Institutos Federais (IFSP/IF)", dork: 'site:ifsp.edu.br OR site:*.edu.br "{query}" "resultado" OR "classificação"' },
+            { name: "Bancas & Vestibulares", dork: '"{query}" site:org.br OR site:com.br "resultado final" OR "lista de convocação" OR "aprovados"' },
             { name: "Jusbrasil (Processos)", url: "https://www.jusbrasil.com.br/busca?q={query}", dork: 'site:jusbrasil.com.br "{query}"' },
             { name: "Escavador (Histórico)", url: "https://www.escavador.com/busca?q={query}", dork: 'site:escavador.com "{query}"' },
-            { name: "LinkedIn (Perfis)", dork: 'site:linkedin.com/in/ "{query}"' },
-            { name: "Facebook (Pessoas)", dork: 'site:facebook.com "{query}"' },
-            { name: "Diário Oficial (Consulta)", dork: '"{query}" site:imprensaoficial.com.br OR "diário oficial"' },
             { name: "Portal da Transparência", dork: 'site:transparencia.gov.br "{query}"' },
-            { name: "Convocação / Aprovados", dork: '"{query}" "lista de convocação" OR "aprovados" OR "classificação" OR "resultado final" 2024 2025' },
+            { name: "Convocação / Aprovados", dork: '"{query}" "lista de chamada" OR "lista de convocação" OR "resultado final" 2024 2025' },
             { name: "Registros Gov (PDF/XLS)", dork: '"{query}" filetype:pdf OR filetype:xls OR filetype:doc site:gov.br' },
             { name: "Busca Global (Tudo)", dork: '"{query}" -site:twitter.com -site:facebook.com' }
         ]
@@ -217,7 +216,7 @@ class OSINTApp {
         // AUTO-MINING: If this is a dorking search, automatically trigger mining for key tools
         if (type === 'dorking') {
             config.template.forEach(item => {
-                if (item.dork && (item.name.includes("Aprovados") || item.name.includes("ETEC") || item.name.includes("Gov") || item.name.includes("Global"))) {
+                if (item.dork && (item.name.includes("Aprovados") || item.name.includes("ETEC") || item.name.includes("IFSP") || item.name.includes("Bancas") || item.name.includes("Gov") || item.name.includes("Global"))) {
                     const dork = item.dork.split('{query}').join(query);
                     // Pass null as the button since it's an automated call
                     this.mineDorkResults(dork, null);
@@ -310,7 +309,7 @@ class OSINTApp {
                         if (metaData.status === 'success') {
                             const res = metaData.data;
                             const titleLower = (res.title || '').toLowerCase();
-                            const isHighRelevance = titleLower.includes('aprovado') || titleLower.includes('classifica') || titleLower.includes('convoca') || titleLower.includes('resultado') || titleLower.includes('lista');
+                            const isHighRelevance = titleLower.includes('aprovado') || titleLower.includes('classifica') || titleLower.includes('convoca') || titleLower.includes('resultado') || titleLower.includes('lista') || titleLower.includes('ifsp') || titleLower.includes('federal') || titleLower.includes('instituto');
                             
                             const badge = isHighRelevance ? `<div class="absolute top-2 right-2 px-1.5 py-0.5 bg-emerald-500 text-white rounded text-[8px] font-black uppercase tracking-widest animate-pulse">ALTA RELEVÂNCIA</div>` : '';
                             
