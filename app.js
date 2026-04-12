@@ -29,16 +29,15 @@ const TOOLS_CONFIG = {
         icon: "search",
         description: "Bases de dados oficiais e motor de extração automatizada de registros.",
         template: [
-            { name: "Listas ETEC / CPS (Direto)", url: "https://classificacao.vestibulinho.etec.sp.gov.br/", dork: 'site:classificacao.vestibulinho.etec.sp.gov.br "{query}"' },
+            { name: "Listas ETEC / CTS (Direto)", url: "https://classificacao.vestibulinho.etec.sp.gov.br/", dork: 'site:classificacao.vestibulinho.etec.sp.gov.br OR site:cps.sp.gov.br "{query}" "classificação"' },
             { name: "Jusbrasil (Processos)", url: "https://www.jusbrasil.com.br/busca?q={query}", dork: 'site:jusbrasil.com.br "{query}"' },
             { name: "Escavador (Histórico)", url: "https://www.escavador.com/busca?q={query}", dork: 'site:escavador.com "{query}"' },
             { name: "LinkedIn (Perfis)", dork: 'site:linkedin.com/in/ "{query}"' },
             { name: "Facebook (Pessoas)", dork: 'site:facebook.com "{query}"' },
             { name: "Diário Oficial (Consulta)", dork: '"{query}" site:imprensaoficial.com.br OR "diário oficial"' },
             { name: "Portal da Transparência", dork: 'site:transparencia.gov.br "{query}"' },
-            { name: "Sinesp / Infoseg", dork: 'site:sinesp.gov.br "{query}"' },
-            { name: "Convocação / Aprovados", dork: '"{query}" "lista de convocação" OR "classificação" OR "vestibular" 2026' },
-            { name: "Registros Gov (PDF/XLS)", dork: '"{query}" filetype:pdf OR filetype:xls site:gov.br' },
+            { name: "Convocação / Aprovados", dork: '"{query}" "lista de convocação" OR "aprovados" OR "classificação" OR "resultado final" 2024 2025' },
+            { name: "Registros Gov (PDF/XLS)", dork: '"{query}" filetype:pdf OR filetype:xls OR filetype:doc site:gov.br' },
             { name: "Busca Global (Tudo)", dork: '"{query}" -site:twitter.com -site:facebook.com' }
         ]
     },
@@ -213,7 +212,18 @@ class OSINTApp {
         this.refreshIcons();
 
         if (resultsSection) resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        this.showToast(`Auditoria de registros iniciada para: ${query}`, 'info');
+        this.showToast(`Auditoria e mineração automática de registros iniciada para: ${query}`, 'info');
+
+        // AUTO-MINING: If this is a dorking search, automatically trigger mining for key tools
+        if (type === 'dorking') {
+            config.template.forEach(item => {
+                if (item.dork && (item.name.includes("Aprovados") || item.name.includes("ETEC") || item.name.includes("Gov") || item.name.includes("Global"))) {
+                    const dork = item.dork.split('{query}').join(query);
+                    // Pass null as the button since it's an automated call
+                    this.mineDorkResults(dork, null);
+                }
+            });
+        }
     }
 
     async validateAndRender(item, query, grid) {
@@ -271,9 +281,11 @@ class OSINTApp {
     }
 
     async mineDorkResults(dork, btn) {
-        const originalHtml = btn.innerHTML;
-        btn.innerHTML = `<i data-lucide="refresh-cw" class="w-3.5 h-3.5 animate-spin"></i> Minerando...`;
-        this.refreshIcons();
+        const originalHtml = btn ? btn.innerHTML : null;
+        if (btn) {
+            btn.innerHTML = `<i data-lucide="refresh-cw" class="w-3.5 h-3.5 animate-spin"></i> Minerando...`;
+            this.refreshIcons();
+        }
         try {
             const searchUrl = `https://duckduckgo.com/html/?q=${encodeURIComponent(dork)}`;
             const response = await fetch(`https://api.microlink.io?url=${encodeURIComponent(searchUrl)}&data.results.selector=.result__title&data.results.type=list&data.results.attr=href`);
@@ -297,18 +309,42 @@ class OSINTApp {
                         const metaData = await metaRes.json();
                         if (metaData.status === 'success') {
                             const res = metaData.data;
+                            const titleLower = (res.title || '').toLowerCase();
+                            const isHighRelevance = titleLower.includes('aprovado') || titleLower.includes('classifica') || titleLower.includes('convoca') || titleLower.includes('resultado') || titleLower.includes('lista');
+                            
+                            const badge = isHighRelevance ? `<div class="absolute top-2 right-2 px-1.5 py-0.5 bg-emerald-500 text-white rounded text-[8px] font-black uppercase tracking-widest animate-pulse">ALTA RELEVÂNCIA</div>` : '';
+                            
                             const card = document.createElement('div');
-                            card.className = 'glass-card p-4 rounded-xl border border-emerald-500/20 hover:border-emerald-500/50 transition-all flex flex-col gap-3 relative overflow-hidden';
-                            card.innerHTML = `<div class="flex items-center gap-3"><div class="w-8 h-8 rounded bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20"><i data-lucide="file-text" class="w-4 h-4 text-emerald-400"></i></div><div class="min-w-0"><h5 class="text-xs font-bold text-white truncate">${res.title || 'Documento'}</h5><p class="text-[9px] text-slate-500 truncate font-mono">${new URL(link).hostname}</p></div></div><p class="text-[10px] text-slate-400 line-clamp-2">${res.description || 'Sem descrição.'}</p><a href="${link}" target="_blank" class="mt-2 w-full bg-emerald-600/10 hover:bg-emerald-600 text-emerald-400 hover:text-white border border-emerald-500/30 text-[10px] font-bold py-2 rounded text-center">Visualizar Registro</a>`;
-                            findingsGrid.prepend(card);
+                            card.className = `glass-card p-4 rounded-xl border ${isHighRelevance ? 'border-emerald-400 bg-emerald-500/5 shadow-lg shadow-emerald-500/10' : 'border-emerald-500/20'} hover:border-emerald-500/50 transition-all flex flex-col gap-3 relative overflow-hidden`;
+                            card.innerHTML = `
+                                ${badge}
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded ${isHighRelevance ? 'bg-emerald-500' : 'bg-emerald-500/10'} flex items-center justify-center border border-emerald-500/20">
+                                        <i data-lucide="${link.endsWith('.pdf') ? 'file-text' : 'scroll'}" class="w-4 h-4 ${isHighRelevance ? 'text-white' : 'text-emerald-400'}"></i>
+                                    </div>
+                                    <div class="min-w-0">
+                                        <h5 class="text-xs font-bold text-white truncate">${res.title || 'Documento'}</h5>
+                                        <p class="text-[9px] text-slate-500 truncate font-mono">${new URL(link).hostname}</p>
+                                    </div>
+                                </div>
+                                <p class="text-[10px] text-slate-400 line-clamp-2">${res.description || 'Registro oficial identificado via rastreamento de documentos.'}</p>
+                                <a href="${link}" target="_blank" class="mt-2 w-full ${isHighRelevance ? 'bg-emerald-600 shadow-lg shadow-emerald-600/30' : 'bg-emerald-600/10'} hover:bg-emerald-600 text-${isHighRelevance ? 'white' : 'emerald-400'} hover:text-white border border-emerald-500/30 text-[10px] font-bold py-2 rounded text-center transition-all">
+                                    Abrir Registro Encontrado
+                                </a>
+                            `;
+                            
+                            if (isHighRelevance) findingsGrid.prepend(card);
+                            else findingsGrid.appendChild(card);
                             this.refreshIcons();
                         }
                     }
                 });
             }
         } catch (e) {} finally {
-            btn.innerHTML = originalHtml;
-            this.refreshIcons();
+            if (btn) {
+                btn.innerHTML = originalHtml;
+                this.refreshIcons();
+            }
         }
     }
 
