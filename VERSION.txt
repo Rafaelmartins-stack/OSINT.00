@@ -1,3 +1,3 @@
-v3.1.0 Platinum - Force Sync Edition
-Modified: 2026-04-12 11:09:00
-Status: Hard file reset (core.js/main.css) to bypass cache. Full UI visibility restore.
+v4.0.0 Platinum - True Reverse Edition
+Modified: 2026-04-12 11:24:00
+Status: Integrated true Reverse-Email OSINT engines (Epieos / IntelX). Cache hard-busted via query strings.
