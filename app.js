@@ -90,7 +90,11 @@ const SOCIAL_PLATFORMS = [
 
 class OSINTApp {
     constructor() {
-        this.history = JSON.parse(localStorage.getItem('osint_history') || '[]');
+        try {
+            this.history = JSON.parse(localStorage.getItem('osint_history') || '[]');
+        } catch (e) {
+            this.history = [];
+        }
         this.currentIntel = {
             emails: new Set(),
             phones: new Set(),
@@ -107,10 +111,17 @@ class OSINTApp {
     }
 
     init() {
-        this.setupEventListeners();
-        this.renderHistory();
-        this.applyTheme();
-        this.refreshIcons();
+        try {
+            this.refreshIcons();
+            this.setupEventListeners();
+            this.renderHistory();
+            this.applyTheme();
+            
+            // Final icon sweep after everything is ready
+            setTimeout(() => this.refreshIcons(), 500);
+        } catch (e) {
+            console.error("OSINTApp Init Error:", e);
+        }
     }
 
     refreshIcons() {
@@ -512,9 +523,41 @@ class OSINTApp {
     }
 
     clearHistory() { this.history = []; localStorage.removeItem('osint_history'); this.renderHistory(); this.showToast('Histórico limpo.'); }
-    toggleTheme() { this.currentTheme = this.currentTheme === 'dark' ? 'light' : 'dark'; localStorage.setItem('osint_theme', this.currentTheme); this.applyTheme(); }
-    applyTheme() { const body = document.body; const toggleIcon = document.querySelector('#themeToggle i'); if (this.currentTheme === 'light') { body.classList.add('light-mode'); if (toggleIcon) toggleIcon.setAttribute('data-lucide', 'sun'); } else { body.classList.remove('light-mode'); if (toggleIcon) toggleIcon.setAttribute('data-lucide', 'moon'); } this.refreshIcons(); }
-    showToast(message, type = 'info') { const toast = document.getElementById('toast'); const msgEl = document.getElementById('toastMessage'); if (!toast || !msgEl) return; msgEl.textContent = message; toast.classList.remove('opacity-0', 'translate-y-10'); toast.classList.add('opacity-100', 'translate-y-0'); setTimeout(() => { toast.classList.add('opacity-0', 'translate-y-10'); toast.classList.remove('opacity-100', 'translate-y-0'); }, 3000); }
+    toggleTheme() { 
+        this.currentTheme = this.currentTheme === 'dark' ? 'light' : 'dark'; 
+        localStorage.setItem('osint_theme', this.currentTheme); 
+        this.applyTheme(); 
+    }
+
+    applyTheme() { 
+        const body = document.body; 
+        const toggleIcon = document.querySelector('#themeToggle i'); 
+        if (!body) return;
+
+        if (this.currentTheme === 'light') { 
+            body.classList.add('light-mode'); 
+            if (toggleIcon) toggleIcon.setAttribute('data-lucide', 'sun'); 
+        } else { 
+            body.classList.remove('light-mode'); 
+            if (toggleIcon) toggleIcon.setAttribute('data-lucide', 'moon'); 
+        } 
+        this.refreshIcons(); 
+    }
+
+    showToast(message, type = 'info') { 
+        const toast = document.getElementById('toast'); 
+        const msgEl = document.getElementById('toastMessage'); 
+        if (!toast || !msgEl) return; 
+        
+        msgEl.textContent = message; 
+        toast.classList.remove('opacity-0', 'translate-y-10'); 
+        toast.classList.add('opacity-100', 'translate-y-0'); 
+        
+        setTimeout(() => { 
+            toast.classList.add('opacity-0', 'translate-y-10'); 
+            toast.classList.remove('opacity-100', 'translate-y-0'); 
+        }, 3000); 
+    }
     showFallbackTools(type, query) {
         const grid = document.getElementById('resultsGrid');
         const config = TOOLS_CONFIG[type];
