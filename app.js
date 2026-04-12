@@ -10,7 +10,8 @@ const TOOLS_CONFIG = {
         template: [
             { name: "Escavador", url: "https://www.escavador.com/busca?q={query}" },
             { name: "Jusbrasil", url: "https://www.jusbrasil.com.br/busca?q={query}" },
-            { name: "LinkedIn", dork: 'site:linkedin.com/in/ "{query}"' }
+            { name: "LinkedIn", dork: 'site:linkedin.com/in/ "{query}"' },
+            { id: 'global_person', name: "Deep Web Mentions", dork: '"{query}"' }
         ]
     },
     domain: {
@@ -42,6 +43,7 @@ const TOOLS_CONFIG = {
             { id: 'twitch', name: "Twitch Matches", dork: 'site:twitch.tv "{query}"' },
             { id: 'tiktok', name: "TikTok Matches", dork: 'site:tiktok.com "{query}"' },
             { id: 'youtube', name: "YouTube Matches", dork: 'site:youtube.com "{query}"' },
+            { id: 'global_mail', name: "Global Account Mentions", dork: '"{query}" -site:google.com' },
             { id: 'leak', name: "Leak Repositories", dork: '"{query}" password OR "data leak"' }
         ]
     }
@@ -122,82 +124,85 @@ class OSINTApp {
         this.discoveredLinks.clear();
         this.addToHistory(query);
 
-        // START DISCOVERY (ONLY FOR EMAILS - NO HANDLE GUESSING)
-        if (type === 'email') {
-            this.checkGravatar(query);
-            
-            // Track all template searches to ensure loader is removed
-            const searches = config.template.map(item => this.performPureCorrelation(item, query));
-            
-            // Fail-safe: remove loader after 20 seconds even if fetches hang
-            setTimeout(() => {
-                const loader = document.getElementById('loader');
-                if (loader) {
-                    loader.innerHTML = `<p class="text-[10px] text-slate-500 uppercase font-black">Pesquisa concluída ou interrompida por tempo.</p>`;
-                    setTimeout(() => loader.remove(), 2000);
-                }
-            }, 20000);
-            
+        // START DISCOVERY (AUTOMATED FOR EMAILS AND DORKS)
+        const searches = [];
+        
+        if (type === 'email') this.checkGravatar(query);
+
+        config.template.forEach(item => {
+            if (item.dork) {
+                searches.push(this.performDiscovery(item, query));
+            } else {
+                this.renderAuditStatus(item, query);
+            }
+        });
+
+        // Fail-safe: remove loader after 30 seconds
+        setTimeout(() => {
+            const loader = document.getElementById('loader');
+            if (loader) {
+                loader.innerHTML = `<p class="text-[10px] text-indigo-400 uppercase font-black tracking-widest">Escaneamento Profundo Concluído</p>`;
+                setTimeout(() => loader.remove(), 3000);
+            }
+        }, 30000);
+
+        if (searches.length > 0) {
             Promise.allSettled(searches).then(() => {
-                // Success path handled inside each performPureCorrelation
-            });
-        } else {
-            // Standard person/domain logic
-            config.template.forEach(item => {
-                if (item.dork) this.mineDorks(item, query);
-                else this.renderAuditStatus(item, query);
+                const loader = document.getElementById('loader');
+                if (loader) loader.remove();
             });
         }
     }
 
     /**
-     * CORE v2.0 LOGIC: Find actual email mentions on sites
-     * This identifies accounts with DIFFERENT handles.
+     * CORE v2.5 LOGIC: Automated Discovery Engine
+     * Optimized for both names and emails with broad extraction.
      */
-    async performPureCorrelation(item, email) {
+    async performDiscovery(item, query) {
         const confirmedGrid = document.getElementById('confirmedGrid');
         const statusGrid = document.getElementById('statusGrid');
-        this.renderAuditStatus(item, email, statusGrid);
+        this.renderAuditStatus(item, query, statusGrid);
 
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
+        const timeoutId = setTimeout(() => controller.abort(), 20000); // 20s timeout
 
         try {
-            const searchDork = item.dork.replace('{query}', email);
+            const searchDork = item.dork.replace('{query}', query);
             const searchApi = `https://api.microlink.io?url=${encodeURIComponent(`https://duckduckgo.com/html/?q=${encodeURIComponent(searchDork)}`)}&data.results.selector=.result__a&data.results.type=list&data.results.attr=href`;
             
             const response = await fetch(searchApi, { signal: controller.signal });
-            clearTimeout(timeoutId);
+            if (!response.ok) throw new Error('API limit or block');
             
-            if (!response.ok) throw new Error('API limit reached or blocked');
             const data = await response.json();
-            
             if (data.status === 'success' && data.data.results) {
                 for (const encodedLink of data.data.results) {
                     const link = decodeURIComponent(encodedLink.split('uddg=')[1]?.split('&')[0] || encodedLink);
                     if (link.startsWith('http') && !this.discoveredLinks.has(link)) {
-                        this.discoveredLinks.add(link);
-                        
-                        try {
-                            const metaApi = `https://api.microlink.io?url=${encodeURIComponent(link)}&meta=true`;
-                            const metaResp = await fetch(metaApi, { signal: controller.signal });
-                            const metaData = await metaResp.json();
-                            
-                            if (metaData.status === 'success') {
-                                this.renderIdentityCard(link, metaData.data, confirmedGrid);
-                            } else {
-                                throw new Error('Meta fail');
-                            }
-                        } catch (e) {
-                            this.renderIdentityCard(link, { title: new URL(link).hostname }, confirmedGrid);
-                        }
+                        await this.processResultLink(link, confirmedGrid, controller.signal);
                     }
                 }
             }
         } catch (e) {
-            console.error(`Search failed for ${item.name}:`, e);
+            console.error(`Discovery failed for ${item.name}:`, e);
         } finally {
             clearTimeout(timeoutId);
+        }
+    }
+
+    async processResultLink(link, grid, signal) {
+        this.discoveredLinks.add(link);
+        try {
+            const metaApi = `https://api.microlink.io?url=${encodeURIComponent(link)}&meta=true`;
+            const resp = await fetch(metaApi, { signal });
+            const metaData = await resp.json();
+            
+            if (metaData.status === 'success') {
+                this.renderIdentityCard(link, metaData.data, grid);
+            } else {
+                throw new Error('Meta fail');
+            }
+        } catch (e) {
+            this.renderIdentityCard(link, { title: new URL(link).hostname }, grid);
         }
     }
 
