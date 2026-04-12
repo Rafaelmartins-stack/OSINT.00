@@ -101,6 +101,8 @@ class OSINTApp {
         };
         this.currentTheme = localStorage.getItem('osint_theme') || 'dark';
         this.scannedHandles = new Set();
+        this.discoveredLinks = new Set();
+        this.activeExtractions = 0;
         this.init();
     }
 
@@ -192,42 +194,42 @@ class OSINTApp {
         }
 
         const grid = document.getElementById('resultsGrid');
-        if (!grid) return;
+        const globalGrid = document.getElementById('globalFindingsGrid');
+        const investigationSection = document.getElementById('investigationSection');
+        const resultCountEl = document.getElementById('globalResultCount');
+        
+        if (!grid || !globalGrid) return;
+        
+        this.discoveredLinks.clear();
+        this.activeExtractions = 0;
+        if (resultCountEl) resultCountEl.textContent = '0';
+        if (investigationSection) investigationSection.classList.remove('hidden');
+        globalGrid.innerHTML = '';
+        
         grid.innerHTML = `
-            <div id="searchingArea" class="col-span-full border-2 border-dashed border-slate-800 rounded-2xl p-12 text-center animate-pulse">
-                <div class="flex flex-col items-center gap-4">
-                    <div class="w-12 h-12 bg-purple-500/10 rounded-full flex items-center justify-center border border-purple-500/20 mb-2">
-                        <i data-lucide="shield-search" class="w-6 h-6 text-purple-400"></i>
-                    </div>
-                    <h3 class="text-white font-bold text-lg">Auditando Bases de Dados...</h3>
-                    <p class="text-slate-400 text-sm max-w-sm mx-auto">Verificando a existência de registros para <span class="text-purple-400 font-mono">"${query}"</span> nas bases oficiais. Este processo garante que apenas ferramentas com dados reais sejam exibidas.</p>
+            <div id="searchingArea" class="col-span-full border border-slate-800 rounded-xl p-4 text-center animate-pulse bg-slate-900/40">
+                <div class="flex items-center justify-center gap-3">
+                    <i data-lucide="shield-search" class="w-4 h-4 text-purple-400"></i>
+                    <span class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Iniciando Varredura Profunda em 40+ Fontes...</span>
                 </div>
             </div>
         `;
         this.refreshIcons();
 
-        Promise.all(config.template.map(item => this.validateAndRender(item, query, grid))).then(() => {
-            const searchArea = document.getElementById('searchingArea');
-            if (searchArea) {
-                if (grid.querySelectorAll('.result-card-item').length === 0) {
-                    searchArea.innerHTML = `
-                        <div class="flex flex-col items-center gap-4">
-                            <i data-lucide="search-x" class="w-12 h-12 text-slate-600"></i>
-                            <h3 class="text-slate-200 font-bold text-lg">Nenhum registro encontrado</h3>
-                            <p class="text-slate-500 text-sm max-w-sm mx-auto">Não foram detectados vínculos diretos para este nome nas bases auditadas.</p>
-                            <button onclick="window.osintApp.showFallbackTools('${type}', '${query}')" class="mt-4 text-xs text-purple-400 hover:underline">Exibir todas as ferramentas disponíveis (Busca Manual)</button>
-                        </div>
-                    `;
-                } else {
-                    searchArea.remove();
-                    const footer = document.createElement('div');
-                    footer.className = 'col-span-full pt-8 text-center border-t border-slate-800 mt-8';
-                    footer.innerHTML = `<button onclick="window.osintApp.showFallbackTools('${type}', '${query}')" class="text-xs text-slate-500 hover:text-purple-400 transition-all">Não encontrou o que procurava? Exibir todas as ferramentas de busca.</button>`;
-                    grid.appendChild(footer);
-                }
-            }
-            this.refreshIcons();
+        // 1. Start Multi-Source Discovery
+        config.template.forEach(item => {
+            this.activeExtractions++;
+            this.validateAndRender(item, query, grid, globalGrid);
         });
+
+        // 2. Start Live OSINT (Social/Email)
+        this.performLiveOSINT(type, query, globalGrid);
+        this.addToHistory(type, query);
+        this.refreshIcons();
+
+        if (investigationSection) investigationSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        this.showToast(`Extração direta iniciada: minerando registros de link em link...`, 'info');
+    }
 
         this.performLiveOSINT(type, query, grid);
         this.addToHistory(type, query);
@@ -246,131 +248,103 @@ class OSINTApp {
         }
     }
 
-    async validateAndRender(item, query, grid) {
+    }
+
+    async validateAndRender(item, query, grid, globalGrid) {
         let finalUrl = '';
-        let displayPath = '';
+        if (item.url) finalUrl = item.url.split('{query}').join(encodeURIComponent(query));
+        else if (item.dork) finalUrl = `https://www.google.com/search?q=${encodeURIComponent(item.dork.split('{query}').join(query))}`;
 
-        if (item.url) {
-            finalUrl = item.url.split('{query}').join(encodeURIComponent(query));
-            displayPath = finalUrl;
-        } else if (item.dork) {
-            let dorkString = item.dork.split('{query}').join(query);
-            finalUrl = `https://www.google.com/search?q=${encodeURIComponent(dorkString)}`;
-            displayPath = dorkString;
-        }
-
-        const isDorking = item.dork && !item.url;
         if (item.dork) {
             try {
-                const searchUrl = `https://duckduckgo.com/html/?q=${encodeURIComponent(item.dork.split('{query}').join(query))}`;
+                const searchDork = item.dork.split('{query}').join(query);
+                const searchUrl = `https://duckduckgo.com/html/?q=${encodeURIComponent(searchDork)}`;
                 const response = await fetch(`https://api.microlink.io?url=${encodeURIComponent(searchUrl)}&data.results.selector=.result__title&data.results.type=list`);
                 const data = await response.json();
-                if (!data.status === 'success' || !data.data.results || data.data.results.length === 0) return;
-            } catch (e) {
-                if (isDorking) return;
+                
+                if (data.status === 'success' && data.data.results && data.data.results.length > 0) {
+                    // Success! Render status and AUTO-MINE
+                    this.renderToolStatus(item, finalUrl, grid, "Found");
+                    this.mineDorkResults(searchDork, null, 0, globalGrid);
+                }
+            } catch (e) {} finally {
+                this.activeExtractions--;
+                if (this.activeExtractions === 0) {
+                    const searchArea = document.getElementById('searchingArea');
+                    if (searchArea) searchArea.remove();
+                }
             }
         }
+    }
 
-        const dorkStringForEscaping = item.dork ? item.dork.split('{query}').join(query) : '';
-        const safeDork = dorkStringForEscaping.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-
-        const badge = item.dork ? `<div class="absolute top-2 right-2 px-1.5 py-0.5 bg-purple-500/10 border border-purple-500/20 rounded text-[7px] text-purple-400 font-bold uppercase tracking-widest animate-pulse">Registro Confirmado</div>` : '';
-
-        const mineBtn = item.dork ? `
-            <button data-dork="${safeDork}" onclick="window.osintApp.mineDorkResults(this.getAttribute('data-dork'), this)" 
-                class="mt-1 inline-flex items-center justify-center gap-2 bg-purple-600/20 hover:bg-purple-600 text-purple-300 hover:text-white border border-purple-500/30 text-[10px] font-bold py-2 px-4 rounded-lg transition-all w-full">
-                <i data-lucide="microscope" class="w-3.5 h-3.5"></i> Minerar Todos Links
-            </button>
-        ` : '';
-
+    renderToolStatus(item, url, grid, status) {
         const card = document.createElement('div');
-        card.className = 'glass-card p-4 rounded-xl result-item result-card-item animate-in flex flex-col justify-between h-full relative overflow-hidden';
+        card.className = 'bg-slate-900/50 border border-slate-800 p-2 rounded-lg flex items-center justify-between gap-3 animate-in';
         card.innerHTML = `
-            ${badge}
-            <div class="mb-3 overflow-hidden">
-                <h4 class="font-bold text-sm text-slate-200">${item.name}</h4>
-                <p class="text-[10px] text-slate-500 truncate mt-1 mono-font" title="${displayPath}">${displayPath}</p>
+            <div class="min-w-0">
+                <p class="text-[9px] font-bold text-slate-300 truncate">${item.name}</p>
+                <p class="text-[7px] text-emerald-500 font-mono uppercase tracking-widest mt-0.5">Extração Ativa</p>
             </div>
-            <div class="flex flex-col gap-2 mt-auto">
-                ${mineBtn}
-                <a href="${finalUrl}" target="_blank" rel="noopener noreferrer" 
-                    class="inline-flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-xs font-semibold py-2 px-4 rounded-lg transition-colors border border-slate-700">
-                    Abrir Ferramenta <i data-lucide="external-link" class="w-3 h-3"></i>
-                </a>
-            </div>
+            <a href="${url}" target="_blank" class="text-slate-500 hover:text-emerald-400"><i data-lucide="external-link" class="w-3.5 h-3.5"></i></a>
         `;
-        grid.appendChild(card);
+        grid.prepend(card);
         this.refreshIcons();
     }
 
-    async mineDorkResults(dork, btn, offset = 0) {
-        const originalHtml = btn ? btn.innerHTML : null;
-        if (btn) {
-            btn.innerHTML = `<i data-lucide="refresh-cw" class="w-3.5 h-3.5 animate-spin"></i> Minerando...`;
-            this.refreshIcons();
-        }
+    async mineDorkResults(dork, btn, offset = 0, targetGrid = null) {
+        const grid = targetGrid || document.getElementById('globalFindingsGrid');
+        const pagination = document.getElementById('feedPagination');
+        const countEl = document.getElementById('globalResultCount');
+
         try {
             const searchUrl = `https://duckduckgo.com/html/?q=${encodeURIComponent(dork)}${offset > 0 ? `&s=${offset}` : ''}`;
             const response = await fetch(`https://api.microlink.io?url=${encodeURIComponent(searchUrl)}&data.results.selector=.result__title&data.results.type=list&data.results.attr=href`);
             const data = await response.json();
+            
             if (data.status === 'success' && data.data.results) {
                 const results = data.data.results;
-                let findingsGrid = document.getElementById('deepFindingsGrid');
-                if (!findingsGrid) {
-                    const section = document.createElement('div');
-                    section.className = 'col-span-full mt-8 animate-in';
-                    section.innerHTML = `<div class="flex items-center gap-3 mb-6"><i data-lucide="database" class="w-4 h-4 text-emerald-400"></i><h3 class="text-xs font-black uppercase tracking-widest text-emerald-400">Registros via Deep Search</h3><div class="h-px flex-1 bg-gradient-to-r from-emerald-500/30 to-transparent"></div></div><div id="deepFindingsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div><div id="loadMoreContainer" class="col-span-full mt-6 flex justify-center"></div>`;
-                    document.getElementById('resultsGrid').after(section);
-                    findingsGrid = document.getElementById('deepFindingsGrid');
-                    this.refreshIcons();
-                }
+                if (pagination) pagination.classList.remove('hidden');
+                
                 results.slice(0, 20).forEach(async (encodedLink) => {
                     const link = decodeURIComponent(encodedLink.split('uddg=')[1]?.split('&')[0] || encodedLink);
-                    if (link.startsWith('http')) {
+                    if (link.startsWith('http') && !this.discoveredLinks.has(link)) {
+                        this.discoveredLinks.add(link);
+                        
                         const metaRes = await fetch(`https://api.microlink.io?url=${encodeURIComponent(link)}&meta=true`);
                         const metaData = await metaRes.json();
+                        
                         if (metaData.status === 'success') {
                             const res = metaData.data;
+                            if (countEl) countEl.textContent = parseInt(countEl.textContent) + 1;
+                            
                             const titleLower = (res.title || '').toLowerCase();
-                            const isHighRelevance = titleLower.includes('aprovado') || titleLower.includes('classifica') || titleLower.includes('convoca') || titleLower.includes('resultado') || titleLower.includes('lista') || titleLower.includes('ifsp') || titleLower.includes('federal') || titleLower.includes('instituto');
-                            const badge = isHighRelevance ? `<div class="absolute top-2 right-2 px-1.5 py-0.5 bg-emerald-500 text-white rounded text-[8px] font-black uppercase tracking-widest animate-pulse">ALTA RELEVÂNCIA</div>` : '';
+                            const isHighRelevance = titleLower.includes('aprovado') || titleLower.includes('classifica') || titleLower.includes('lista') || titleLower.includes('ifsp') || titleLower.includes('federal');
+                            
                             const card = document.createElement('div');
-                            card.className = `glass-card p-4 rounded-xl border ${isHighRelevance ? 'border-emerald-400 bg-emerald-500/5 shadow-lg shadow-emerald-500/10' : 'border-emerald-500/20'} hover:border-emerald-500/50 transition-all flex flex-col gap-3 relative overflow-hidden`;
+                            card.className = "glass-card p-4 rounded-xl border border-slate-800 hover:border-emerald-500/50 transition-all flex flex-col gap-3 relative animate-in";
                             card.innerHTML = `
-                                ${badge}
+                                ${isHighRelevance ? '<div class="absolute top-2 right-2 px-1 py-0.5 bg-emerald-500 text-white rounded text-[7px] font-black uppercase tracking-widest animate-pulse">ALTA RELEVÂNCIA</div>' : ''}
                                 <div class="flex items-center gap-3">
-                                    <div class="w-8 h-8 rounded ${isHighRelevance ? 'bg-emerald-500' : 'bg-emerald-500/10'} flex items-center justify-center border border-emerald-500/20">
-                                        <i data-lucide="${link.endsWith('.pdf') ? 'file-text' : 'scroll'}" class="w-4 h-4 ${isHighRelevance ? 'text-white' : 'text-emerald-400'}"></i>
+                                    <div class="w-8 h-8 rounded bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
+                                        <i data-lucide="${link.endsWith('.pdf') ? 'file-text' : 'scroll'}" class="w-4 h-4 text-emerald-400"></i>
                                     </div>
                                     <div class="min-w-0">
-                                        <h5 class="text-xs font-bold text-white truncate">${res.title || 'Documento'}</h5>
-                                        <p class="text-[9px] text-slate-500 truncate font-mono">${new URL(link).hostname}</p>
+                                        <h5 class="text-[11px] font-bold text-white truncate">${res.title || 'Documento'}</h5>
+                                        <p class="text-[8px] text-slate-500 truncate font-mono">${new URL(link).hostname}</p>
                                     </div>
                                 </div>
-                                <p class="text-[10px] text-slate-400 line-clamp-2">${res.description || 'Registro oficial identificado via rastreamento de documentos.'}</p>
-                                <a href="${link}" target="_blank" class="mt-2 w-full ${isHighRelevance ? 'bg-emerald-600 shadow-lg shadow-emerald-600/30' : 'bg-emerald-600/10'} hover:bg-emerald-600 text-${isHighRelevance ? 'white' : 'emerald-400'} hover:text-white border border-emerald-500/30 text-[10px] font-bold py-2 rounded text-center transition-all">
-                                    Abrir Registro Encontrado
+                                <p class="text-[10px] text-slate-400 line-clamp-2">${res.description || 'Extração direta via motor hyper-mining.'}</p>
+                                <a href="${link}" target="_blank" class="mt-2 w-full bg-emerald-600/10 hover:bg-emerald-600 text-emerald-400 hover:text-white border border-emerald-500/20 text-[10px] font-bold py-2 rounded text-center transition-all">
+                                    Acessar Registro Direto
                                 </a>
                             `;
-                            if (isHighRelevance) findingsGrid.prepend(card);
-                            else findingsGrid.appendChild(card);
+                            grid.prepend(card);
                             this.refreshIcons();
                         }
                     }
                 });
-                const loadMoreContainer = document.getElementById('loadMoreContainer');
-                if (loadMoreContainer) {
-                    const safeDork = dork.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-                    loadMoreContainer.innerHTML = `<button onclick="window.osintApp.mineDorkResults('${safeDork}', this, ${offset + 25})" class="bg-slate-900 hover:bg-slate-800 text-slate-400 border border-slate-800 px-6 py-2 rounded-full text-xs font-bold transition-all flex items-center gap-2">Ver mais resultados de "${dork}" <i data-lucide="plus-circle" class="w-4 h-4"></i></button>`;
-                    this.refreshIcons();
-                }
             }
-        } catch (e) {} finally {
-            if (btn) {
-                btn.innerHTML = originalHtml;
-                this.refreshIcons();
-            }
-        }
+        } catch (e) {}
     }
 
     addToHistory(type, query) {
