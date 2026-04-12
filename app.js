@@ -35,6 +35,12 @@ const TOOLS_CONFIG = {
             { name: "Jusbrasil (Processos)", url: "https://www.jusbrasil.com.br/busca?q={query}", dork: 'site:jusbrasil.com.br "{query}"' },
             { name: "Escavador (Histórico)", url: "https://www.escavador.com/busca?q={query}", dork: 'site:escavador.com "{query}"' },
             { name: "Portal da Transparência", dork: 'site:transparencia.gov.br "{query}"' },
+            { name: "Diário Oficial (União)", dork: 'site:in.gov.br "{query}"' },
+            { name: "CNPJ / Quadro Societário", dork: '"{query}" site:cnpj.biz OR site:casadosdados.com.br' },
+            { name: "Tribunal de Justiça (TJ)", dork: 'site:jus.br "{query}"' },
+            { name: "MEC / Aprovados Sisu", dork: 'site:mec.gov.br "{query}"' },
+            { name: "Conselhos Profissionais", dork: 'site:org.br "{query}" "registro profissional" OR "conselho"' },
+            { name: "Diário Oficial (Estados)", dork: '"{query}" site:imprensaoficial.com.br OR "diário oficial"' },
             { name: "Convocação / Aprovados", dork: '"{query}" "lista de chamada" OR "lista de convocação" OR "resultado final" 2024 2025' },
             { name: "Registros Gov (PDF/XLS)", dork: '"{query}" filetype:pdf OR filetype:xls OR filetype:doc site:gov.br' },
             { name: "Busca Global (Tudo)", dork: '"{query}" -site:twitter.com -site:facebook.com' }
@@ -191,16 +197,21 @@ class OSINTApp {
         Promise.all(config.template.map(item => this.validateAndRender(item, query, grid))).then(() => {
             const searchArea = document.getElementById('searchingArea');
             if (searchArea) {
-                if (grid.children.length <= 1) {
+                if (grid.querySelectorAll('.result-card-item').length === 0) {
                     searchArea.innerHTML = `
                         <div class="flex flex-col items-center gap-4">
                             <i data-lucide="search-x" class="w-12 h-12 text-slate-600"></i>
                             <h3 class="text-slate-200 font-bold text-lg">Nenhum registro encontrado</h3>
                             <p class="text-slate-500 text-sm max-w-sm mx-auto">Não foram detectados vínculos diretos para este nome nas bases auditadas.</p>
+                            <button onclick="window.osintApp.showFallbackTools('${type}', '${query}')" class="mt-4 text-xs text-purple-400 hover:underline">Exibir todas as ferramentas disponíveis (Busca Manual)</button>
                         </div>
                     `;
                 } else {
                     searchArea.remove();
+                    const footer = document.createElement('div');
+                    footer.className = 'col-span-full pt-8 text-center border-t border-slate-800 mt-8';
+                    footer.innerHTML = `<button onclick="window.osintApp.showFallbackTools('${type}', '${query}')" class="text-xs text-slate-500 hover:text-purple-400 transition-all">Não encontrou o que procurava? Exibir todas as ferramentas de busca.</button>`;
+                    grid.appendChild(footer);
                 }
             }
             this.refreshIcons();
@@ -238,16 +249,19 @@ class OSINTApp {
             displayPath = dorkString;
         }
 
-        // For Dorking/Records, we prefer to show more than to hide
+        // DYNAMIC DISCOVERY: We probe the source. If 0 hits are found, we don't render the card.
         const isDorking = item.dork && !item.url;
-        if (item.dork && !isDorking) {
+        if (item.dork) {
             try {
                 const searchUrl = `https://duckduckgo.com/html/?q=${encodeURIComponent(item.dork.split('{query}').join(query))}`;
                 const response = await fetch(`https://api.microlink.io?url=${encodeURIComponent(searchUrl)}&data.results.selector=.result__title&data.results.type=list`);
                 const data = await response.json();
-                // Only hide if we are absolutely sure AND it's not a primary dorking tool
+                // If it's a confirmed empty result, we skip rendering this card for this specific search
                 if (!data.status === 'success' || !data.data.results || data.data.results.length === 0) return;
-            } catch (e) {}
+            } catch (e) {
+                // On error, we show it anyway to be safe, but only if it's not a secondary dork
+                if (isDorking) return;
+            }
         }
 
         const dorkStringForEscaping = item.dork ? item.dork.split('{query}').join(query) : '';
@@ -261,7 +275,7 @@ class OSINTApp {
         ` : '';
 
         const card = document.createElement('div');
-        card.className = 'glass-card p-4 rounded-xl result-item animate-in flex flex-col justify-between h-full';
+        card.className = 'glass-card p-4 rounded-xl result-item result-card-item animate-in flex flex-col justify-between h-full';
         card.innerHTML = `
             <div class="mb-3 overflow-hidden">
                 <h4 class="font-bold text-sm text-slate-200">${item.name}</h4>
@@ -560,6 +574,43 @@ class OSINTApp {
     toggleTheme() { this.currentTheme = this.currentTheme === 'dark' ? 'light' : 'dark'; localStorage.setItem('osint_theme', this.currentTheme); this.applyTheme(); }
     applyTheme() { const body = document.body; const toggleIcon = document.querySelector('#themeToggle i'); if (this.currentTheme === 'light') { body.classList.add('light-mode'); if (toggleIcon) toggleIcon.setAttribute('data-lucide', 'sun'); } else { body.classList.remove('light-mode'); if (toggleIcon) toggleIcon.setAttribute('data-lucide', 'moon'); } this.refreshIcons(); }
     showToast(message, type = 'info') { const toast = document.getElementById('toast'); const msgEl = document.getElementById('toastMessage'); if (!toast || !msgEl) return; msgEl.textContent = message; toast.classList.remove('opacity-0', 'translate-y-10'); toast.classList.add('opacity-100', 'translate-y-0'); setTimeout(() => { toast.classList.add('opacity-0', 'translate-y-10'); toast.classList.remove('opacity-100', 'translate-y-0'); }, 3000); }
+    showFallbackTools(type, query) {
+        const grid = document.getElementById('resultsGrid');
+        const config = TOOLS_CONFIG[type];
+        if (!grid || !config) return;
+        
+        this.showToast("Exibindo catálogo completo de ferramentas.");
+        config.template.forEach(item => {
+            // Check if already rendered
+            const exists = Array.from(grid.querySelectorAll('h4')).some(h => h.textContent === item.name);
+            if (!exists) {
+                this.renderToolCard(item, query, grid);
+            }
+        });
+    }
+
+    renderToolCard(item, query, grid) {
+        let finalUrl = '';
+        let displayPath = '';
+        if (item.url) {
+            finalUrl = item.url.split('{query}').join(encodeURIComponent(query));
+            displayPath = finalUrl;
+        } else if (item.dork) {
+            let dorkString = item.dork.split('{query}').join(query);
+            finalUrl = `https://www.google.com/search?q=${encodeURIComponent(dorkString)}`;
+            displayPath = dorkString;
+        }
+        const dorkStringForEscaping = item.dork ? item.dork.split('{query}').join(query) : '';
+        const safeDork = dorkStringForEscaping.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        const mineBtn = item.dork ? `<button data-dork="${safeDork}" onclick="window.osintApp.mineDorkResults(this.getAttribute('data-dork'), this)" class="mt-1 inline-flex items-center justify-center gap-2 bg-purple-600/20 hover:bg-purple-600 text-purple-300 hover:text-white border border-purple-500/30 text-[10px] font-bold py-2 px-4 rounded-lg transition-all w-full"><i data-lucide="microscope" class="w-3.5 h-3.5"></i> Minerar Todos Links</button>` : '';
+
+        const card = document.createElement('div');
+        card.className = 'glass-card p-4 rounded-xl result-item result-card-item animate-in flex flex-col justify-between h-full border-dashed border-slate-700';
+        card.innerHTML = `<div class="mb-3 overflow-hidden"><h4 class="font-bold text-sm text-slate-200">${item.name}</h4><p class="text-[10px] text-slate-500 truncate mt-1 mono-font" title="${displayPath}">${displayPath}</p></div><div class="flex flex-col gap-2 mt-auto">${mineBtn}<a href="${finalUrl}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-xs font-semibold py-2 px-4 rounded-lg transition-colors border border-slate-700">Abrir Ferramenta <i data-lucide="external-link" class="w-3 h-3"></i></a></div>`;
+        grid.appendChild(card);
+        this.refreshIcons();
+    }
+
     extractRealName(title, id) { if (!title) return null; let name = decodeURIComponent(title); if (id === 'instagram' || id === 'twitter') { const match = name.match(/^(.*?) \(@/i); if (match) name = match[1]; } else if (id === 'tiktok') { const parts = title.split(' - '); if (parts.length > 2) name = parts[parts.length - 1]; } name = name.replace(/ • Instagram.*/i, '').replace(/ \| GitHub/i, '').replace(/ \/ X/i, '').trim(); if (name.toLowerCase().includes('instagram') || name.toLowerCase().includes('twitter') || name.length < 2) return null; return name; }
 }
 
