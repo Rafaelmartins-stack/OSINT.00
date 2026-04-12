@@ -37,16 +37,14 @@ const TOOLS_CONFIG = {
         title: "Mail Intel (Identity Discovery)",
         icon: "mail",
         template: [
-            { id: 'instagram', name: "Instagram", exactUrl: 'https://instagram.com/{username}', dork: 'site:instagram.com "{query}"' },
-            { id: 'twitter', name: "Twitter/X", exactUrl: 'https://twitter.com/{username}', dork: 'site:twitter.com "{query}"' },
-            { id: 'tiktok', name: "TikTok", exactUrl: 'https://tiktok.com/@{username}', dork: 'site:tiktok.com "{query}"' },
-            { id: 'github', name: "GitHub", exactUrl: 'https://github.com/{username}', dork: 'site:github.com "{query}"' },
-            { id: 'facebook', name: "Facebook Search", exactUrl: 'https://www.facebook.com/search/people/?q={username}', dork: 'site:facebook.com "{query}"' },
-            { id: 'twitch', name: "Twitch", exactUrl: 'https://twitch.tv/{username}', dork: 'site:twitch.tv "{query}"' },
-            { id: 'youtube', name: "YouTube", exactUrl: 'https://youtube.com/@{username}', dork: 'site:youtube.com "{query}"' },
-            { id: 'linkedin', name: "LinkedIn Matches", dork: 'site:linkedin.com "{query}"' },
-            { id: 'google_dork', name: "Global Mentions", dork: '"{query}" -site:google.com' },
-            { id: 'leak', name: "Leak Repos", dork: '"{query}" password OR "data leak"' }
+            { id: 'epieos', name: "Epieos (Deep Reverse Mail)", exactUrl: 'https://epieos.com/?q={query}' },
+            { id: 'intelx', name: "IntelligenceX (Data Leaks)", exactUrl: 'https://intelx.io/?s={query}' },
+            { id: 'thatsthem', name: "ThatsThem Directory", exactUrl: 'https://thatsthem.com/email/{query}' },
+            { id: 'gravatar', name: "Gravatar Search", exactUrl: 'https://en.gravatar.com/site/check/{query}' },
+            { id: 'github_dork', name: "GitHub Mentions", dork: 'site:github.com "{query}"' },
+            { id: 'pastebin_dork', name: "Pastebin Leaks", dork: 'site:pastebin.com "{query}"' },
+            { id: 'google_dork', name: "Global Web Mentions", dork: '"{query}" -site:google.com' },
+            { id: 'leak', name: "Generic Data Breaches", dork: '"{query}" password OR "data leak"' }
         ]
     }
 };
