@@ -1,3 +1,3 @@
-v2.6.0 Platinum - Fix Edition
-Modified: 2026-04-12 11:00:00
-Status: UI Buttons fixed, Search optimized, History clickable.
+v3.0.0 Platinum - Ultimate Edition
+Modified: 2026-04-12 11:04:00
+Status: Ultimate stability. Event listeners upgraded, manual fallbacks instant, Toasts added.

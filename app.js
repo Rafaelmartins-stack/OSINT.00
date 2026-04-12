@@ -68,38 +68,61 @@ class OSINTApp {
     }
 
     init() {
-        this.setupEventListeners();
-        this.renderHistory();
-        this.applyTheme();
-        this.refreshIcons();
+        try {
+            this.setupEventListeners();
+            this.renderHistory();
+            this.applyTheme();
+            this.refreshIcons();
+        } catch (e) {
+            console.error("Initialization failed:", e);
+        }
     }
 
     refreshIcons() { if (window.lucide) window.lucide.createIcons(); }
 
     setupEventListeners() {
+        // Search Buttons
         document.querySelectorAll('.search-btn').forEach(btn => {
-            btn.onclick = (e) => this.handleSearch(e.currentTarget.getAttribute('data-type'));
+            btn.addEventListener('click', (e) => this.handleSearch(e.currentTarget.getAttribute('data-type')));
         });
+
+        // Enter Key listeners
         ['usernameInput', 'domainInput', 'dorkInput', 'emailInput'].forEach(id => {
             const el = document.getElementById(id);
-            if (el) el.onkeypress = (e) => { if (e.key === 'Enter') this.handleSearch(id.replace('Input', '')); };
+            if (el) el.addEventListener('keypress', (e) => { 
+                if (e.key === 'Enter') this.handleSearch(id.replace('Input', '')); 
+            });
         });
 
         // Toggle Theme
         const themeBtn = document.getElementById('themeToggle');
-        if (themeBtn) themeBtn.onclick = () => {
+        if (themeBtn) themeBtn.addEventListener('click', () => {
             this.currentTheme = this.currentTheme === 'dark' ? 'light' : 'dark';
             localStorage.setItem('osint_theme', this.currentTheme);
             this.applyTheme();
-        };
+            this.showToast(`Mode switched to ${this.currentTheme}`, 'info');
+        });
 
         // Clear History
         const clearBtn = document.getElementById('clearHistory');
-        if (clearBtn) clearBtn.onclick = () => {
-            this.history = [];
-            localStorage.removeItem('osint_history');
-            this.renderHistory();
-        };
+        if (clearBtn) clearBtn.addEventListener('click', () => {
+            if (confirm('Clear search history?')) {
+                this.history = [];
+                localStorage.removeItem('osint_history');
+                this.renderHistory();
+                this.showToast('History cleared', 'info');
+            }
+        });
+    }
+
+    showToast(message, type = 'info') {
+        const toast = document.getElementById('toast');
+        const msgEl = document.getElementById('toastMessage');
+        if (!toast || !msgEl) return;
+        
+        msgEl.textContent = message.toUpperCase();
+        toast.classList.remove('opacity-0', 'translate-y-10', 'pointer-events-none');
+        setTimeout(() => toast.classList.add('opacity-0', 'translate-y-10', 'pointer-events-none'), 3000);
     }
 
     handleSearch(type) {
@@ -139,17 +162,18 @@ class OSINTApp {
 
         this.discoveredLinks.clear();
         this.addToHistory(query);
+        this.showToast(`Starting Deep Scan: ${query}`, 'info');
 
         // START DISCOVERY (AUTOMATED FOR EMAILS AND DORKS)
         const searches = [];
         
         if (type === 'email') this.checkGravatar(query);
 
+        // IMMEDIATE MANUAL FALLBACK RENDERING
         config.template.forEach(item => {
+            this.renderAuditStatus(item, query);
             if (item.dork) {
                 searches.push(this.performDiscovery(item, query));
-            } else {
-                this.renderAuditStatus(item, query);
             }
         });
 
@@ -157,14 +181,18 @@ class OSINTApp {
         setTimeout(() => {
             const loader = document.getElementById('loader');
             if (loader) {
-                loader.innerHTML = `<p class="text-[10px] text-indigo-400 uppercase font-black tracking-widest">Escaneamento Profundo Concluído</p>`;
-                setTimeout(() => loader.remove(), 3000);
+                loader.innerHTML = `<p class="text-[10px] text-indigo-400 uppercase font-black tracking-widest">Scan finalized (automatic and manual results combined)</p>`;
+                setTimeout(() => loader.remove(), 4000);
             }
         }, 30000);
 
         if (searches.length > 0) {
-            Promise.allSettled(searches).then(() => {
+            Promise.allSettled(searches).then((results) => {
                 const loader = document.getElementById('loader');
+                const anySuccess = results.some(r => r.status === 'fulfilled');
+                if (!anySuccess) {
+                    this.showToast('Automated Scan Limited - See manual results below', 'error');
+                }
                 if (loader) loader.remove();
             });
         }
@@ -322,7 +350,7 @@ class OSINTApp {
         `).join(' ');
 
         list.querySelectorAll('.history-item').forEach(btn => {
-            btn.onclick = () => {
+            btn.addEventListener('click', () => {
                 const query = btn.getAttribute('data-query');
                 // Detect type (simple heuristic)
                 const type = query.includes('@') ? 'email' : (query.includes('.') ? 'domain' : 'username');
@@ -332,7 +360,7 @@ class OSINTApp {
                     inputEl.value = query;
                     this.executeSearch(type, query);
                 }
-            };
+            });
         });
     }
 
