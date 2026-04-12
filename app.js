@@ -1,6 +1,6 @@
 /**
- * OSINT Toolkit - Hyper-Match v1.9.0 Platinum
- * Engine: Direct Correlation and Identity Mapping
+ * OSINT Toolkit - Pure Correlation v2.1 Platinum
+ * Engine: String-Matching Discovery (No Handle Guessing)
  */
 
 const TOOLS_CONFIG = {
@@ -10,8 +10,7 @@ const TOOLS_CONFIG = {
         template: [
             { name: "Escavador", url: "https://www.escavador.com/busca?q={query}" },
             { name: "Jusbrasil", url: "https://www.jusbrasil.com.br/busca?q={query}" },
-            { name: "LinkedIn", dork: 'site:linkedin.com/in/ "{query}"' },
-            { name: "FaceCheck.ID", url: "https://facecheck.id/" }
+            { name: "LinkedIn", dork: 'site:linkedin.com/in/ "{query}"' }
         ]
     },
     domain: {
@@ -27,20 +26,22 @@ const TOOLS_CONFIG = {
         icon: "search",
         template: [
             { name: "ETEC / CPS", dork: 'site:vestibulinho.etec.sp.gov.br "{query}"' },
-            { name: "Diários Oficiais", dork: 'site:in.gov.br "{query}"' }
+            { name: "IFSP / Federal", dork: 'site:ifsp.edu.br "{query}"' }
         ]
     },
     email: {
-        title: "Mail Intel Platinum",
+        title: "Mail Intel (Identity Discovery)",
         icon: "mail",
         template: [
-            { name: "GitHub Link", dork: 'site:github.com "{query}"' },
-            { name: "Instagram Link", dork: 'site:instagram.com "{query}"' },
-            { name: "LinkedIn Link", dork: 'site:linkedin.com "{query}"' },
-            { name: "Facebook Link", dork: 'site:facebook.com "{query}"' },
-            { name: "Twitter Link", dork: 'site:twitter.com "{query}"' },
-            { name: "EPIEOS", url: "https://epieos.com/?q={query}" },
-            { name: "OSINT Industries", url: "https://osint.industries/search?query={query}" }
+            // PURE CORRELATION DORKS (NO HANDLE GUESSING)
+            { id: 'github', name: "GitHub Matches", dork: 'site:github.com "{query}"' },
+            { id: 'instagram', name: "Instagram Matches", dork: 'site:instagram.com "{query}"' },
+            { id: 'facebook', name: "Facebook Matches", dork: 'site:facebook.com "{query}"' },
+            { id: 'twitter', name: "Twitter Matches", dork: 'site:twitter.com "{query}"' },
+            { id: 'linkedin', name: "LinkedIn Matches", dork: 'site:linkedin.com "{query}"' },
+            { id: 'twitch', name: "Twitch Matches", dork: 'site:twitch.tv "{query}"' },
+            { id: 'youtube', name: "YouTube Matches", dork: 'site:youtube.com "{query}"' },
+            { id: 'leak', name: "Leak Repositories", dork: '"{query}" password OR "data leak"' }
         ]
     }
 };
@@ -61,7 +62,6 @@ class OSINTApp {
         this.history = JSON.parse(localStorage.getItem('osint_history') || '[]');
         this.currentTheme = localStorage.getItem('osint_theme') || 'dark';
         this.discoveredLinks = new Set();
-        console.log("OSINT Engine v1.9.0 Loaded Successfully.");
     }
 
     init() {
@@ -77,8 +77,6 @@ class OSINTApp {
         document.querySelectorAll('.search-btn').forEach(btn => {
             btn.onclick = (e) => this.handleSearch(e.currentTarget.getAttribute('data-type'));
         });
-        const themeBtn = document.getElementById('themeToggle');
-        if (themeBtn) themeBtn.onclick = () => this.toggleTheme();
         ['usernameInput', 'domainInput', 'dorkInput', 'emailInput'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.onkeypress = (e) => { if (e.key === 'Enter') this.handleSearch(id.replace('Input', '')); };
@@ -86,7 +84,7 @@ class OSINTApp {
     }
 
     handleSearch(type) {
-        const id = type === 'dork' ? 'dorkInput' : (type === 'email' ? 'emailInput' : (type === 'username' ? 'usernameInput' : `${type}Input`));
+        const id = type === 'email' ? 'emailInput' : (type === 'username' ? 'usernameInput' : (type === 'dork' ? 'dorkInput' : `${type}Input`));
         const inputEl = document.getElementById(id);
         if (!inputEl || !inputEl.value.trim()) return;
         this.executeSearch(type === 'dork' ? 'dorking' : type, inputEl.value.trim());
@@ -96,14 +94,12 @@ class OSINTApp {
         const config = TOOLS_CONFIG[type];
         if (!config) return;
 
-        console.log(`Starting deep extraction for [${type}]: ${query}`);
-
         const resultsSection = document.getElementById('resultsSection');
         const grid = document.getElementById('resultsGrid');
         const metaEl = document.getElementById('resultMeta');
         
         if (resultsSection) resultsSection.classList.remove('hidden');
-        if (metaEl) metaEl.textContent = `TARGET: ${query}`;
+        if (metaEl) metaEl.textContent = `CORRELAÇÃO: ${query.toUpperCase()}`;
 
         if (grid) {
             grid.innerHTML = `
@@ -112,10 +108,10 @@ class OSINTApp {
                         <div class="absolute inset-0 border-4 border-indigo-500/10 rounded-full"></div>
                         <div class="absolute inset-0 border-4 border-t-indigo-500 rounded-full animate-spin"></div>
                     </div>
-                    <p class="text-[10px] font-black uppercase tracking-[0.5em] text-indigo-400">Varredura v1.9 em Tempo Real...</p>
+                    <p class="text-[10px] font-black uppercase tracking-[0.4em] text-indigo-400">Escaneando Web para Vínculos Diretos...</p>
                 </div>
-                <div id="confirmedGrid" class="col-span-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8 order-1"></div>
-                <div id="statusGrid" class="col-span-full grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 opacity-40 order-2 border-t border-slate-800 pt-8"></div>
+                <div id="confirmedGrid" class="col-span-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8"></div>
+                <div id="statusGrid" class="col-span-full grid grid-cols-2 lg:grid-cols-4 gap-2 opacity-30 border-t border-white/5 pt-8"></div>
             `;
             this.refreshIcons();
         }
@@ -123,83 +119,87 @@ class OSINTApp {
         this.discoveredLinks.clear();
         this.addToHistory(query);
 
-        // 1. Instant Digital Identity Detection (Non-Scraping)
-        this.instantDetect(query, type);
-
-        // 2. Dork Miner (Deep Web Records)
-        config.template.forEach(item => {
-            if (item.dork) this.mineDorks(item, query);
-            else this.renderAuditStatus(item, query);
-        });
+        // START DISCOVERY (ONLY FOR EMAILS - NO HANDLE GUESSING)
+        if (type === 'email') {
+            this.checkGravatar(query);
+            config.template.forEach(item => this.performPureCorrelation(item, query));
+        } else {
+            // Standard person/domain logic
+            config.template.forEach(item => {
+                if (item.dork) this.mineDorks(item, query);
+                else this.renderAuditStatus(item, query);
+            });
+        }
     }
 
-    async instantDetect(query, type) {
-        const grid = document.getElementById('confirmedGrid');
-        const handle = type === 'email' ? query.split('@')[0] : query;
-
-        // Verify gravatar immediately
-        if (type === 'email') this.checkGravatar(query, grid);
-
-        // Instant platform checks per social ID
-        SOCIAL_PLATFORMS.forEach(async (p) => {
-            const profileUrl = `https://${p.domain}/${handle}`;
-            try {
-                // Use unavatar as a lightning fast verification
-                const checkUrl = `https://unavatar.io/${p.id}/${query}`;
-                const resp = await fetch(checkUrl, { method: 'HEAD' });
-                if (resp.ok) {
-                    this.renderResultCard(profileUrl, p.name, grid, p);
-                }
-            } catch (e) {}
-        });
-    }
-
-    async mineDorks(item, query) {
-        const grid = document.getElementById('confirmedGrid');
+    /**
+     * CORE v2.0 LOGIC: Find actual email mentions on sites
+     * This identifies accounts with DIFFERENT handles.
+     */
+    async performPureCorrelation(item, email) {
+        const confirmedGrid = document.getElementById('confirmedGrid');
         const statusGrid = document.getElementById('statusGrid');
-        this.renderAuditStatus(item, query, statusGrid);
+        this.renderAuditStatus(item, email, statusGrid);
 
         try {
-            const searchDork = item.dork.replace('{query}', query);
-            const api = `https://api.microlink.io?url=${encodeURIComponent(`https://duckduckgo.com/html/?q=${encodeURIComponent(searchDork)}`)}&data.results.selector=.result__a&data.results.type=list&data.results.attr=href`;
-            const response = await fetch(api);
+            const searchDork = item.dork.replace('{query}', email);
+            // Search DuckDuckGo specifically for the literal string
+            const searchApi = `https://api.microlink.io?url=${encodeURIComponent(`https://duckduckgo.com/html/?q=${encodeURIComponent(searchDork)}`)}&data.results.selector=.result__a&data.results.type=list&data.results.attr=href`;
+            
+            const response = await fetch(searchApi);
             const data = await response.json();
             
             if (data.status === 'success' && data.data.results) {
-                data.data.results.forEach(linkUrl => {
-                    const link = decodeURIComponent(linkUrl.split('uddg=')[1]?.split('&')[0] || linkUrl);
+                // For each found URL, crawl its metadata to see the REAL profile name
+                data.data.results.forEach(async (encodedLink) => {
+                    const link = decodeURIComponent(encodedLink.split('uddg=')[1]?.split('&')[0] || encodedLink);
                     if (link.startsWith('http') && !this.discoveredLinks.has(link)) {
                         this.discoveredLinks.add(link);
-                        const platform = SOCIAL_PLATFORMS.find(p => link.includes(p.domain)) || { name: 'External Resource', icon: 'link', color: 'bg-indigo-600' };
-                        this.renderResultCard(link, platform.name, grid, platform);
+                        
+                        // Verification: Get the real title of the profile found
+                        try {
+                            const metaApi = `https://api.microlink.io?url=${encodeURIComponent(link)}&meta=true`;
+                            const metaResp = await fetch(metaApi);
+                            const metaData = await metaResp.json();
+                            
+                            if (metaData.status === 'success') {
+                                this.renderIdentityCard(link, metaData.data, confirmedGrid);
+                            }
+                        } catch (e) {
+                            // Fallback if metadata fails
+                            this.renderIdentityCard(link, { title: new URL(link).hostname }, confirmedGrid);
+                        }
                     }
                 });
             }
         } catch (e) {}
     }
 
-    renderResultCard(link, platformName, grid, platform) {
+    renderIdentityCard(link, meta, grid) {
         const loader = document.getElementById('loader');
         if (loader) loader.remove();
 
+        const host = new URL(link).hostname;
+        const platform = SOCIAL_PLATFORMS.find(p => host.includes(p.domain)) || { name: host, color: 'bg-slate-700', icon: 'user' };
+
         const card = document.createElement('div');
-        card.className = "glass-card p-6 rounded-3xl border border-indigo-500/30 hover:border-indigo-400 bg-indigo-500/5 transition-all animate-in flex flex-col gap-5 group";
+        card.className = "glass-card p-6 rounded-3xl border border-indigo-500/40 hover:border-indigo-400 bg-indigo-500/5 transition-all animate-in flex flex-col gap-5";
         card.innerHTML = `
             <div class="flex items-center gap-4">
-                <div class="${platform.color || 'bg-indigo-600'} w-16 h-16 rounded-2xl flex items-center justify-center shadow-2xl group-hover:scale-105 transition-transform">
-                    <i data-lucide="${platform.icon || 'user'}" class="w-8 h-8 text-white"></i>
+                <div class="${platform.color} w-16 h-16 rounded-2xl flex items-center justify-center shadow-2xl">
+                    <i data-lucide="${platform.icon || 'link'}" class="w-8 h-8 text-white"></i>
                 </div>
-                <div>
-                    <h4 class="text-sm font-black text-white uppercase tracking-widest">Identidade Confirmada</h4>
-                    <p class="text-[10px] text-indigo-400 font-mono font-black mt-1 uppercase">${platformName}</p>
+                <div class="min-w-0">
+                    <h4 class="text-sm font-black text-white uppercase tracking-widest truncate">${meta.title || platform.name}</h4>
+                    <span class="bg-indigo-600/20 text-indigo-400 text-[7px] px-2 py-0.5 rounded-full border border-indigo-500/20 uppercase font-black">Vínculo Direto via E-mail</span>
                 </div>
             </div>
-            <div class="bg-indigo-950/40 p-3 rounded-xl border border-indigo-500/10">
-                <p class="text-[8px] text-indigo-500 font-bold uppercase mb-1">Localização do Vínculo:</p>
-                <p class="text-[9px] text-slate-300 font-mono break-all line-clamp-2">${link}</p>
+            <div class="bg-slate-950/60 p-4 rounded-2xl border border-white/5">
+                <p class="text-[8px] text-slate-500 font-mono uppercase font-black mb-1">Caminho da Conta:</p>
+                <p class="text-[10px] text-slate-200 font-mono break-all line-clamp-2">${link}</p>
             </div>
-            <a href="${link}" target="_blank" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-4 rounded-2xl text-center text-[10px] font-black uppercase tracking-[0.2em] shadow-xl shadow-indigo-600/20 transition-all border border-indigo-400/20">
-                Ver Perfil Logar
+            <a href="${link}" target="_blank" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-4 rounded-2xl text-center text-[11px] font-black uppercase tracking-[0.2em] shadow-xl shadow-indigo-600/30 transition-all border border-indigo-400/20 active:scale-95">
+                Acessar Perfil Logado
             </a>
         `;
         grid.prepend(card);
@@ -208,34 +208,35 @@ class OSINTApp {
 
     renderAuditStatus(item, query, grid) {
         if (!grid) grid = document.getElementById('statusGrid');
-        if (!grid) return;
-        const loader = document.getElementById('loader');
-        if (loader) loader.remove();
         const url = item.url ? item.url.replace('{query}', encodeURIComponent(query)) : `https://www.google.com/search?q=${encodeURIComponent(item.dork.replace('{query}', query))}`;
         const div = document.createElement('div');
-        div.className = "bg-slate-900 border border-slate-800 p-2 rounded-lg flex justify-between items-center group animate-in";
-        div.innerHTML = `<span class="text-[8px] text-slate-500 font-bold uppercase truncate">${item.name}</span><a href="${url}" target="_blank"><i data-lucide="external-link" class="w-3 h-3 text-slate-700 hover:text-white"></i></a>`;
+        div.className = "bg-slate-900/50 border border-slate-800 p-2.5 rounded-xl flex justify-between items-center group animate-in";
+        div.innerHTML = `<span class="text-[8px] text-slate-500 font-bold uppercase truncate">${item.name}</span><a href="${url}" target="_blank"><i data-lucide="external-link" class="w-3.5 h-3.5 text-slate-700 hover:text-white"></i></a>`;
         grid.appendChild(div);
         this.refreshIcons();
     }
 
-    async checkGravatar(email, grid) {
+    async checkGravatar(email) {
+        const grid = document.getElementById('confirmedGrid');
         try {
             const hash = CryptoJS.MD5(email.toLowerCase().trim()).toString();
-            const response = await fetch(`https://en.gravatar.com/${hash}.json`);
-            if (response.ok) {
-                const profile = (await response.json()).entry[0];
+            const resp = await fetch(`https://en.gravatar.com/${hash}.json`);
+            if (resp.ok) {
+                const profile = (await resp.json()).entry[0];
+                const loader = document.getElementById('loader');
+                if (loader) loader.remove();
+                
                 const card = document.createElement('div');
-                card.className = "glass-card p-6 rounded-3xl border border-purple-500/40 animate-in flex flex-col gap-4 bg-purple-500/5";
+                card.className = "glass-card p-6 rounded-3xl border border-purple-500/40 animate-in flex flex-col gap-5 bg-purple-500/5";
                 card.innerHTML = `
                     <div class="flex items-center gap-4">
-                        <img src="${profile.thumbnailUrl}" class="w-16 h-16 rounded-2xl ring-2 ring-purple-500/30 object-cover shadow-2xl">
+                        <img src="${profile.thumbnailUrl}" class="w-16 h-16 rounded-2xl ring-2 ring-purple-500/30 shadow-2xl object-cover">
                         <div>
-                            <h4 class="text-sm font-black text-white uppercase tracking-widest">${profile.displayName || 'Usuário'}</h4>
-                            <p class="text-[9px] text-purple-400 font-black uppercase">Gravatar Global</p>
+                            <h4 class="text-sm font-black text-white uppercase tracking-widest">${profile.displayName || 'Vínculo Global'}</h4>
+                            <p class="text-[9px] text-purple-400 font-black uppercase">Gravatar ID</p>
                         </div>
                     </div>
-                    <a href="${profile.profileUrl}" target="_blank" class="w-full bg-purple-600 hover:bg-purple-500 text-white py-4 rounded-2xl text-center text-[10px] font-black uppercase tracking-widest border border-purple-400/20">Acessar Identidade Digital</a>`;
+                    <a href="${profile.profileUrl}" target="_blank" class="w-full bg-purple-600 hover:bg-purple-500 text-white py-4 rounded-2xl text-center text-[10px] font-black uppercase tracking-widest transition-all">Ver Identidade Digital</a>`;
                 grid.prepend(card);
                 this.refreshIcons();
             }
@@ -250,11 +251,10 @@ class OSINTApp {
 
     renderHistory() {
         const list = document.getElementById('historyList');
-        if (list) list.innerHTML = this.history.map(h => `<span class="bg-indigo-950/30 border border-indigo-500/20 px-3 py-1.5 rounded-lg text-[9px] text-indigo-400 uppercase font-black">${h}</span>`).join(' ');
+        if (list) list.innerHTML = this.history.map(h => `<span class="bg-indigo-950/20 border border-indigo-500/20 px-3 py-1.5 rounded-lg text-[9px] text-indigo-400 uppercase font-black">${h}</span>`).join(' ');
     }
 
-    applyTheme() { document.body.classList.toggle('light-mode', this.currentTheme === 'light'); this.refreshIcons(); }
-    toggleTheme() { this.currentTheme = this.currentTheme === 'dark' ? 'light' : 'dark'; localStorage.setItem('osint_theme', this.currentTheme); this.applyTheme(); }
+    applyTheme() { document.body.classList.toggle('light-mode', this.currentTheme === 'light'); }
 }
 
 window.addEventListener('load', () => { window.app = new OSINTApp(); window.app.init(); });
