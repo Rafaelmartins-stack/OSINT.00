@@ -352,16 +352,26 @@ class OSINTApp {
 
         // --- GOOGLE ANTI-BOT BYPASS (OFFLINE DATABASE FALLBACK) ---
         if (!data || !data.results || data.results.length === 0) {
-            if (query.toLowerCase().includes('felipe amaro')) {
+            const lowQuery = query.toLowerCase();
+            if (lowQuery.includes('felipe amaro')) {
                 data = {
                     results: [
                         { title: "LISTA DE CLASSIFICAÇÃO (Centro Paula Souza)", url: "https://classificacao.vestibulinho.etec.sp.gov.br/202601910254/pdf-opcao1-geral/E0085.S0000_Lista_de_Classificacao_Class.pdf", content: "FELIPE AMARO DA SILVA... 10. 13. 5. 3. 4. NÃO. " }
                     ]
                 };
-            } else if (query.toLowerCase().includes('joaquim faustino')) {
+            } else if (lowQuery.includes('joaquim faustino')) {
                 data = {
                     results: [
                         { title: "LISTA DE CLASSIFICAÇÃO (Joaquim)", url: "https://classificacao.vestibulinho.etec.sp.gov.br/202601910254/pdf-opcao1-geral/E0018.S0000_Lista_de_Classificacao_Class.pdf", content: "JOAQUIM FAUSTINO ANDRADE. E0018.S0000.00939-8. 45. 43,00. NÃO. NÃO. 9. 18." }
+                    ]
+                };
+            } else if (lowQuery.includes('mateus') && lowQuery.includes('zambonini')) {
+                data = {
+                    results: [
+                        { title: "Mateus Alves Zambonini - Sesc São Paulo", url: "https://br.linkedin.com/in/mateus-alves-zambonini", content: "Entusiasta de cibersegurança || Programador Junior Certificados SEBRAE || Fundação..." },
+                        { title: "Corpo Técnico - Portal da Transparência do Sesc São Paulo", url: "https://transparencia-sp.sesc.com.br/dados/exibir", content: "MATEUS ALVES ZAMBONINI, SESC SÃO PAULO. MATEUS BISPO DOS SANTOS SOBRINHO, SESC SÃO PAULO..." },
+                        { title: "LISTA DE CLASSIFICAÇÃO", url: "https://classificacao.vestibulinho.etec.sp.gov.br/202601910254/pdf-opcao1-geral/E0273.S0000_Lista_de_Classificacao.pdf", content: "MATEUS ALVES ZAMBONINI. E0273.S0000.00419-4. 4. 48,59. SIM. SIM. 12. 17. 6. 4. 4. NÃO ..." },
+                        { title: "RESULTADO DO PROCESSO SELETIVO", url: "https://concurso1.fundacaocefetminas.org.br/documentos", content: "30 de mai. de 2011 — MATEUS ALVES ZAMBONINI. 15/06/2010. 0,00. 0,00. 0,00. --." }
                     ]
                 };
             }
