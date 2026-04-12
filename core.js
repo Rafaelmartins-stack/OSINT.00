@@ -269,7 +269,6 @@ class OSINTApp {
     }
 
     async performNativeDiscovery(query, grid, config) {
-        // Construct an aggressive dork based on user intent
         const isMail = query.includes('@');
         let searchString = `"${query}"`;
         
@@ -277,9 +276,12 @@ class OSINTApp {
             searchString = `"${query}" (filetype:pdf OR filetype:xls OR site:sp.gov.br OR site:jusbrasil.com.br)`;
         }
 
+        const rawUrl = `https://searx.be/search?q=${encodeURIComponent(searchString)}&format=json`;
+        
         const fallbackApis = [
-            `https://searx.be/search?q=${encodeURIComponent(searchString)}&format=json`,
-            `https://searx.space/search?q=${encodeURIComponent(searchString)}&format=json`
+            `https://corsproxy.io/?${encodeURIComponent(rawUrl)}`,
+            `https://api.allorigins.win/raw?url=${encodeURIComponent(rawUrl)}`,
+            rawUrl
         ];
 
         let data = null;
@@ -287,10 +289,17 @@ class OSINTApp {
             try {
                 const response = await fetch(api, { cache: 'no-store' });
                 if (response.ok) {
-                    data = await response.json();
-                    if (data.results && data.results.length > 0) break;
+                    const text = await response.text();
+                    try {
+                        // AllOrigins might wrap in contents, Searx / corsproxy returns raw JSON
+                        data = JSON.parse(text);
+                        if (data.contents) data = JSON.parse(data.contents); // Unpack allorigins
+                        if (data.results && data.results.length > 0) break;
+                    } catch (e) {
+                         // invalid json
+                    }
                 }
-            } catch (e) { console.warn("API Failed: " + api); }
+            } catch (e) { console.warn("API Tunnel Failed: " + api); }
         }
 
         const loader = document.getElementById('loader');
