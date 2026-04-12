@@ -51,12 +51,12 @@ const TOOLS_CONFIG = {
         icon: "mail",
         description: "Encontre perfis e contas em redes sociais vinculadas diretamente a este e-mail.",
         template: [
-            { name: "OSINT Industries (100+ Sites)", url: "https://osint.industries/search?query={query}" },
-            { name: "EPIEOS (Google/Social Link)", url: "https://epieos.com/?q={query}" },
-            { name: "Gravatar (Verified Assets)", url: "https://en.gravatar.com/{query}" },
-            { name: "LinkedIn Identity", url: "https://www.google.com/search?q=site:linkedin.com \"{query}\"" },
+            { name: "OSINT Industries (100+ Sites)", url: "https://osint.industries/search?query={query}", dork: '"{query}" site:osint.industries' },
+            { name: "EPIEOS (Google/Social Link)", url: "https://epieos.com/?q={query}", dork: '"{query}" site:epieos.com' },
+            { name: "Gravatar (Verified Assets)", url: "https://en.gravatar.com/{query}", dork: '"{query}" site:gravatar.com' },
+            { name: "LinkedIn Identity", url: "https://www.google.com/search?q=site:linkedin.com \"{query}\"", dork: 'site:linkedin.com "{query}"' },
             { name: "Instagram / Social Dork", dork: '"{query}" site:instagram.com OR site:facebook.com OR site:tiktok.com' },
-            { name: "Breach Directory (Leaks)", url: "https://breachdirectory.org/search?term={query}" }
+            { name: "Breach Directory (Leaks)", url: "https://breachdirectory.org/search?term={query}", dork: '"{query}" site:breachdirectory.org' }
         ]
     }
 };
@@ -224,12 +224,10 @@ class OSINTApp {
         if (resultsSection) resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
         this.showToast(`Auditoria e mineração automática de registros iniciada para: ${query}`, 'info');
 
-        // AUTO-MINING: If this is a dorking search, automatically trigger mining for key tools
         if (type === 'dorking') {
             config.template.forEach(item => {
                 if (item.dork && (item.name.includes("Aprovados") || item.name.includes("ETEC") || item.name.includes("IFSP") || item.name.includes("Bancas") || item.name.includes("Gov") || item.name.includes("Global"))) {
                     const dork = item.dork.split('{query}').join(query);
-                    // Pass null as the button since it's an automated call
                     this.mineDorkResults(dork, null);
                 }
             });
@@ -249,17 +247,14 @@ class OSINTApp {
             displayPath = dorkString;
         }
 
-        // DYNAMIC DISCOVERY: We probe the source. If 0 hits are found, we don't render the card.
         const isDorking = item.dork && !item.url;
         if (item.dork) {
             try {
                 const searchUrl = `https://duckduckgo.com/html/?q=${encodeURIComponent(item.dork.split('{query}').join(query))}`;
                 const response = await fetch(`https://api.microlink.io?url=${encodeURIComponent(searchUrl)}&data.results.selector=.result__title&data.results.type=list`);
                 const data = await response.json();
-                // If it's a confirmed empty result, we skip rendering this card for this specific search
                 if (!data.status === 'success' || !data.data.results || data.data.results.length === 0) return;
             } catch (e) {
-                // On error, we show it anyway to be safe, but only if it's not a secondary dork
                 if (isDorking) return;
             }
         }
@@ -300,7 +295,6 @@ class OSINTApp {
             this.refreshIcons();
         }
         try {
-            // Use DuckDuckGo with offset/page simulation
             const searchUrl = `https://duckduckgo.com/html/?q=${encodeURIComponent(dork)}${offset > 0 ? `&s=${offset}` : ''}`;
             const response = await fetch(`https://api.microlink.io?url=${encodeURIComponent(searchUrl)}&data.results.selector=.result__title&data.results.type=list&data.results.attr=href`);
             const data = await response.json();
@@ -315,7 +309,6 @@ class OSINTApp {
                     findingsGrid = document.getElementById('deepFindingsGrid');
                     this.refreshIcons();
                 }
-                
                 results.slice(0, 20).forEach(async (encodedLink) => {
                     const link = decodeURIComponent(encodedLink.split('uddg=')[1]?.split('&')[0] || encodedLink);
                     if (link.startsWith('http')) {
@@ -325,9 +318,7 @@ class OSINTApp {
                             const res = metaData.data;
                             const titleLower = (res.title || '').toLowerCase();
                             const isHighRelevance = titleLower.includes('aprovado') || titleLower.includes('classifica') || titleLower.includes('convoca') || titleLower.includes('resultado') || titleLower.includes('lista') || titleLower.includes('ifsp') || titleLower.includes('federal') || titleLower.includes('instituto');
-                            
                             const badge = isHighRelevance ? `<div class="absolute top-2 right-2 px-1.5 py-0.5 bg-emerald-500 text-white rounded text-[8px] font-black uppercase tracking-widest animate-pulse">ALTA RELEVÂNCIA</div>` : '';
-                            
                             const card = document.createElement('div');
                             card.className = `glass-card p-4 rounded-xl border ${isHighRelevance ? 'border-emerald-400 bg-emerald-500/5 shadow-lg shadow-emerald-500/10' : 'border-emerald-500/20'} hover:border-emerald-500/50 transition-all flex flex-col gap-3 relative overflow-hidden`;
                             card.innerHTML = `
@@ -346,15 +337,12 @@ class OSINTApp {
                                     Abrir Registro Encontrado
                                 </a>
                             `;
-                            
                             if (isHighRelevance) findingsGrid.prepend(card);
                             else findingsGrid.appendChild(card);
                             this.refreshIcons();
                         }
                     }
                 });
-
-                // Pagination Button
                 const loadMoreContainer = document.getElementById('loadMoreContainer');
                 if (loadMoreContainer) {
                     const safeDork = dork.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
@@ -420,20 +408,7 @@ class OSINTApp {
                             const profile = profileData.data;
                             const titleLower = profile.title.toLowerCase();
                             const descLower = (profile.description || '').toLowerCase();
-                            const isNotFound = titleLower.includes('404') || 
-                                             titleLower.includes('page not found') || 
-                                             titleLower.includes('profile / x') ||
-                                             titleLower.includes('perfil / x') ||
-                                             (platform.id === 'twitter' && titleLower.endsWith('on x')) ||
-                                             descLower.includes('não perca o que está acontecendo') ||
-                                             descLower.includes('don\'t miss what\'s happening') ||
-                                             descLower === 'tiktok pwa' ||
-                                             profile.title.trim() === platform.name ||
-                                             profile.title === 'X' ||
-                                             profile.title === 'Perfil / X' ||
-                                             (platform.id === 'instagram' && (titleLower === 'instagram' || descLower.includes('login') || titleLower.includes('entrar'))) ||
-                                             (platform.id === 'spotify' && (link.includes('?app=desktop') || titleLower.includes('spotify - web player')));
-
+                            const isNotFound = titleLower.includes('404') || titleLower.includes('page not found') || titleLower.includes('profile / x') || titleLower.includes('perfil / x') || (platform.id === 'twitter' && titleLower.endsWith('on x')) || descLower.includes('não perca o que está acontecendo') || descLower.includes('don\'t miss what\'s happening') || descLower === 'tiktok pwa' || profile.title.trim() === platform.name || profile.title === 'X' || profile.title === 'Perfil / X' || (platform.id === 'instagram' && (titleLower === 'instagram' || descLower.includes('login') || titleLower.includes('entrar'))) || (platform.id === 'spotify' && (link.includes('?app=desktop') || titleLower.includes('spotify - web player')));
                             if (!isNotFound) {
                                 this.injectSocialResult(grid, { ...platform, handle: handle, title: profile.title, realName: this.extractRealName(profile.title, platform.id), description: profile.description, image: profile.image?.url || `https://unavatar.io/${platform.id}/${handle}`, url: link, isBridgeMatch: true, color: "from-cyan-400 to-blue-600", icon: "search" });
                             }
@@ -520,21 +495,7 @@ class OSINTApp {
                         const profile = data.data;
                         const titleLower = profile.title.toLowerCase();
                         const descLower = (profile.description || '').toLowerCase();
-                        
-                        const isNotFound = titleLower.includes('404') || 
-                                         titleLower.includes('page not found') || 
-                                         titleLower.includes('faça o seu dia') || 
-                                         titleLower.includes('profile / x') ||
-                                         titleLower.includes('perfil / x') ||
-                                         (platform.id === 'twitter' && titleLower.endsWith('on x')) ||
-                                         descLower.includes('não perca o que está acontecendo') || 
-                                         descLower.includes('don\'t miss what\'s happening') ||
-                                         profile.title.trim() === platform.name || 
-                                         profile.title === 'X' ||
-                                         profile.title === 'Perfil / X' ||
-                                         (platform.id === 'instagram' && (titleLower === 'instagram' || descLower.includes('login') || titleLower.includes('entrar'))) ||
-                                         (platform.id === 'spotify' && (targetUrl.includes('?app=desktop') || titleLower.includes('spotify - web player')));
-
+                        const isNotFound = titleLower.includes('404') || titleLower.includes('page not found') || titleLower.includes('faça o seu dia') || titleLower.includes('profile / x') || titleLower.includes('perfil / x') || (platform.id === 'twitter' && titleLower.endsWith('on x')) || descLower.includes('não perca o que está acontecendo') || descLower.includes('don\'t miss what\'s happening') || profile.title.trim() === platform.name || profile.title === 'X' || profile.title === 'Perfil / X' || (platform.id === 'instagram' && (titleLower === 'instagram' || descLower.includes('login') || titleLower.includes('entrar'))) || (platform.id === 'spotify' && (targetUrl.includes('?app=desktop') || titleLower.includes('spotify - web player')));
                         if (!isNotFound) {
                             const realName = this.extractRealName(profile.title, platform.id);
                             this.injectSocialResult(socialGrid, { ...platform, handle: variant, title: profile.title, realName: realName, description: profile.description, image: profile.image?.url || `https://unavatar.io/${platform.id}/${variant}`, url: targetUrl, isBridgeMatch: isConfirmed, color: isConfirmed ? "from-amber-400 to-orange-600" : platform.color, icon: isConfirmed ? "link-2" : platform.icon });
@@ -588,14 +549,10 @@ class OSINTApp {
         const grid = document.getElementById('resultsGrid');
         const config = TOOLS_CONFIG[type];
         if (!grid || !config) return;
-        
         this.showToast("Exibindo catálogo completo de ferramentas.");
         config.template.forEach(item => {
-            // Check if already rendered
             const exists = Array.from(grid.querySelectorAll('h4')).some(h => h.textContent === item.name);
-            if (!exists) {
-                this.renderToolCard(item, query, grid);
-            }
+            if (!exists) this.renderToolCard(item, query, grid);
         });
     }
 
@@ -613,12 +570,20 @@ class OSINTApp {
         const dorkStringForEscaping = item.dork ? item.dork.split('{query}').join(query) : '';
         const safeDork = dorkStringForEscaping.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
         const mineBtn = item.dork ? `<button data-dork="${safeDork}" onclick="window.osintApp.mineDorkResults(this.getAttribute('data-dork'), this)" class="mt-1 inline-flex items-center justify-center gap-2 bg-purple-600/20 hover:bg-purple-600 text-purple-300 hover:text-white border border-purple-500/30 text-[10px] font-bold py-2 px-4 rounded-lg transition-all w-full"><i data-lucide="microscope" class="w-3.5 h-3.5"></i> Minerar Todos Links</button>` : '';
-
         const card = document.createElement('div');
         card.className = 'glass-card p-4 rounded-xl result-item result-card-item animate-in flex flex-col justify-between h-full border-dashed border-slate-700';
         card.innerHTML = `<div class="mb-3 overflow-hidden"><h4 class="font-bold text-sm text-slate-200">${item.name}</h4><p class="text-[10px] text-slate-500 truncate mt-1 mono-font" title="${displayPath}">${displayPath}</p></div><div class="flex flex-col gap-2 mt-auto">${mineBtn}<a href="${finalUrl}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-xs font-semibold py-2 px-4 rounded-lg transition-colors border border-slate-700">Abrir Ferramenta <i data-lucide="external-link" class="w-3 h-3"></i></a></div>`;
         grid.appendChild(card);
         this.refreshIcons();
+    }
+
+    pivotToPersonSearch(name) {
+        const input = document.getElementById('usernameInput');
+        if (input) {
+            input.value = name;
+            document.querySelector('[data-type="username"]').click();
+            this.showToast(`Pivoting to deep search for: ${name}`);
+        }
     }
 
     extractRealName(title, id) { if (!title) return null; let name = decodeURIComponent(title); if (id === 'instagram' || id === 'twitter') { const match = name.match(/^(.*?) \(@/i); if (match) name = match[1]; } else if (id === 'tiktok') { const parts = title.split(' - '); if (parts.length > 2) name = parts[parts.length - 1]; } name = name.replace(/ • Instagram.*/i, '').replace(/ \| GitHub/i, '').replace(/ \/ X/i, '').trim(); if (name.toLowerCase().includes('instagram') || name.toLowerCase().includes('twitter') || name.length < 2) return null; return name; }
