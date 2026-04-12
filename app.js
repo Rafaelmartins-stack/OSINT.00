@@ -40,6 +40,7 @@ const TOOLS_CONFIG = {
             { id: 'twitter', name: "Twitter Matches", dork: 'site:twitter.com "{query}"' },
             { id: 'linkedin', name: "LinkedIn Matches", dork: 'site:linkedin.com "{query}"' },
             { id: 'twitch', name: "Twitch Matches", dork: 'site:twitch.tv "{query}"' },
+            { id: 'tiktok', name: "TikTok Matches", dork: 'site:tiktok.com "{query}"' },
             { id: 'youtube', name: "YouTube Matches", dork: 'site:youtube.com "{query}"' },
             { id: 'leak', name: "Leak Repositories", dork: '"{query}" password OR "data leak"' }
         ]
@@ -124,7 +125,22 @@ class OSINTApp {
         // START DISCOVERY (ONLY FOR EMAILS - NO HANDLE GUESSING)
         if (type === 'email') {
             this.checkGravatar(query);
-            config.template.forEach(item => this.performPureCorrelation(item, query));
+            
+            // Track all template searches to ensure loader is removed
+            const searches = config.template.map(item => this.performPureCorrelation(item, query));
+            
+            // Fail-safe: remove loader after 20 seconds even if fetches hang
+            setTimeout(() => {
+                const loader = document.getElementById('loader');
+                if (loader) {
+                    loader.innerHTML = `<p class="text-[10px] text-slate-500 uppercase font-black">Pesquisa concluída ou interrompida por tempo.</p>`;
+                    setTimeout(() => loader.remove(), 2000);
+                }
+            }, 20000);
+            
+            Promise.allSettled(searches).then(() => {
+                // Success path handled inside each performPureCorrelation
+            });
         } else {
             // Standard person/domain logic
             config.template.forEach(item => {
@@ -143,38 +159,46 @@ class OSINTApp {
         const statusGrid = document.getElementById('statusGrid');
         this.renderAuditStatus(item, email, statusGrid);
 
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
+
         try {
             const searchDork = item.dork.replace('{query}', email);
-            // Search DuckDuckGo specifically for the literal string
             const searchApi = `https://api.microlink.io?url=${encodeURIComponent(`https://duckduckgo.com/html/?q=${encodeURIComponent(searchDork)}`)}&data.results.selector=.result__a&data.results.type=list&data.results.attr=href`;
             
-            const response = await fetch(searchApi);
+            const response = await fetch(searchApi, { signal: controller.signal });
+            clearTimeout(timeoutId);
+            
+            if (!response.ok) throw new Error('API limit reached or blocked');
             const data = await response.json();
             
             if (data.status === 'success' && data.data.results) {
-                // For each found URL, crawl its metadata to see the REAL profile name
-                data.data.results.forEach(async (encodedLink) => {
+                for (const encodedLink of data.data.results) {
                     const link = decodeURIComponent(encodedLink.split('uddg=')[1]?.split('&')[0] || encodedLink);
                     if (link.startsWith('http') && !this.discoveredLinks.has(link)) {
                         this.discoveredLinks.add(link);
                         
-                        // Verification: Get the real title of the profile found
                         try {
                             const metaApi = `https://api.microlink.io?url=${encodeURIComponent(link)}&meta=true`;
-                            const metaResp = await fetch(metaApi);
+                            const metaResp = await fetch(metaApi, { signal: controller.signal });
                             const metaData = await metaResp.json();
                             
                             if (metaData.status === 'success') {
                                 this.renderIdentityCard(link, metaData.data, confirmedGrid);
+                            } else {
+                                throw new Error('Meta fail');
                             }
                         } catch (e) {
-                            // Fallback if metadata fails
                             this.renderIdentityCard(link, { title: new URL(link).hostname }, confirmedGrid);
                         }
                     }
-                });
+                }
             }
-        } catch (e) {}
+        } catch (e) {
+            console.error(`Search failed for ${item.name}:`, e);
+        } finally {
+            clearTimeout(timeoutId);
+        }
     }
 
     renderIdentityCard(link, meta, grid) {
