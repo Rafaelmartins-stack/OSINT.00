@@ -37,10 +37,22 @@ const TOOLS_CONFIG = {
             { name: "Portal da Transparência", dork: 'site:transparencia.gov.br "{query}"' },
             { name: "Diário Oficial (União)", dork: 'site:in.gov.br "{query}"' },
             { name: "CNPJ / Quadro Societário", dork: '"{query}" site:cnpj.biz OR site:casadosdados.com.br' },
-            { name: "Tribunal de Justiça (TJ)", dork: 'site:jus.br "{query}"' },
-            { name: "MEC / Aprovados Sisu", dork: 'site:mec.gov.br "{query}"' },
-            { name: "Conselhos Profissionais", dork: 'site:org.br "{query}" "registro profissional" OR "conselho"' },
-            { name: "Diário Oficial (Estados)", dork: '"{query}" site:imprensaoficial.com.br OR "diário oficial"' },
+            { name: "Tribunal Regional (TRF1)", dork: 'site:trf1.jus.br "{query}"' },
+            { name: "Tribunal Regional (TRF2)", dork: 'site:trf2.jus.br "{query}"' },
+            { name: "Tribunal Regional (TRF3)", dork: 'site:trf3.jus.br "{query}"' },
+            { name: "Tribunal Regional (TRF4)", dork: 'site:trf4.jus.br "{query}"' },
+            { name: "Tribunal Regional (TRF5)", dork: 'site:trf5.jus.br "{query}"' },
+            { name: "Advogados (CNA/OAB)", dork: 'site:cna.oab.org.br "{query}"' },
+            { name: "Médicos (Portal CRM)", dork: 'site:portal.cfm.org.br "{query}"' },
+            { name: "Engenheiros (CREA)", dork: 'site:crea.org.br "{query}"' },
+            { name: "Contadores (CFC)", dork: 'site:cfc.org.br "{query}"' },
+            { name: "Dentistas (CFO)", dork: 'site:cfo.org.br "{query}"' },
+            { name: "Transparência (SP)", dork: 'site:transparencia.sp.gov.br "{query}"' },
+            { name: "Transparência (RJ)", dork: 'site:transparencia.rj.gov.br "{query}"' },
+            { name: "Transparência (MG)", dork: 'site:transparencia.mg.gov.br "{query}"' },
+            { name: "Transparência (RS)", dork: 'site:transparencia.rs.gov.br "{query}"' },
+            { name: "MEC / Sisu Aprovados", dork: 'site:mec.gov.br "{query}"' },
+            { name: "Acadêmico (Lattes)", dork: 'site:lattes.cnpq.br "{query}"' },
             { name: "Convocação / Aprovados", dork: '"{query}" "lista de chamada" OR "lista de convocação" OR "resultado final" 2024 2025' },
             { name: "Registros Gov (PDF/XLS)", dork: '"{query}" filetype:pdf OR filetype:xls OR filetype:doc site:gov.br' },
             { name: "Busca Global (Tudo)", dork: '"{query}" -site:twitter.com -site:facebook.com' }
@@ -262,6 +274,8 @@ class OSINTApp {
         const dorkStringForEscaping = item.dork ? item.dork.split('{query}').join(query) : '';
         const safeDork = dorkStringForEscaping.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
+        const badge = item.dork ? `<div class="absolute top-2 right-2 px-1.5 py-0.5 bg-purple-500/10 border border-purple-500/20 rounded text-[7px] text-purple-400 font-bold uppercase tracking-widest animate-pulse">Registro Confirmado</div>` : '';
+
         const mineBtn = item.dork ? `
             <button data-dork="${safeDork}" onclick="window.osintApp.mineDorkResults(this.getAttribute('data-dork'), this)" 
                 class="mt-1 inline-flex items-center justify-center gap-2 bg-purple-600/20 hover:bg-purple-600 text-purple-300 hover:text-white border border-purple-500/30 text-[10px] font-bold py-2 px-4 rounded-lg transition-all w-full">
@@ -270,8 +284,9 @@ class OSINTApp {
         ` : '';
 
         const card = document.createElement('div');
-        card.className = 'glass-card p-4 rounded-xl result-item result-card-item animate-in flex flex-col justify-between h-full';
+        card.className = 'glass-card p-4 rounded-xl result-item result-card-item animate-in flex flex-col justify-between h-full relative overflow-hidden';
         card.innerHTML = `
+            ${badge}
             <div class="mb-3 overflow-hidden">
                 <h4 class="font-bold text-sm text-slate-200">${item.name}</h4>
                 <p class="text-[10px] text-slate-500 truncate mt-1 mono-font" title="${displayPath}">${displayPath}</p>
