@@ -231,25 +231,6 @@ class OSINTApp {
         this.showToast(`Extração direta iniciada: minerando registros de link em link...`, 'info');
     }
 
-        this.performLiveOSINT(type, query, grid);
-        this.addToHistory(type, query);
-        this.refreshIcons();
-
-        if (resultsSection) resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        this.showToast(`Auditoria e mineração automática de registros iniciada para: ${query}`, 'info');
-
-        if (type === 'dorking') {
-            config.template.forEach(item => {
-                if (item.dork && (item.name.includes("Aprovados") || item.name.includes("ETEC") || item.name.includes("IFSP") || item.name.includes("Bancas") || item.name.includes("Gov") || item.name.includes("Global"))) {
-                    const dork = item.dork.split('{query}').join(query);
-                    this.mineDorkResults(dork, null);
-                }
-            });
-        }
-    }
-
-    }
-
     async validateAndRender(item, query, grid, globalGrid) {
         let finalUrl = '';
         if (item.url) finalUrl = item.url.split('{query}').join(encodeURIComponent(query));
