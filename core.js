@@ -238,21 +238,17 @@ class OSINTApp {
         const resultsSection = document.getElementById('resultsSection');
         const grid = document.getElementById('resultsGrid');
         const metaEl = document.getElementById('resultMeta');
+        const titleEl = document.getElementById('resultTitle');
         
         if (resultsSection) resultsSection.classList.remove('hidden');
-        if (metaEl) metaEl.textContent = `CORRELAÇÃO: ${query.toUpperCase()}`;
+        if (metaEl) metaEl.textContent = `QUERY: ${query.toUpperCase()}`;
+        if (titleEl) titleEl.innerHTML = `${config.title} <span class="text-xs font-normal text-slate-500">(${type})</span>`;
 
         if (grid) {
             grid.innerHTML = `
-                <div id="loader" class="col-span-full py-16 flex flex-col items-center justify-center gap-4 animate-pulse">
-                    <div class="relative w-20 h-20">
-                        <div class="absolute inset-0 border-4 border-indigo-500/10 rounded-full"></div>
-                        <div class="absolute inset-0 border-4 border-t-indigo-500 rounded-full animate-spin"></div>
-                    </div>
+                <div id="loader" class="col-span-full py-8 flex flex-col items-center justify-center gap-4 animate-pulse border-b border-indigo-500/20 mb-4">
                     <p class="text-[10px] font-black uppercase tracking-[0.4em] text-indigo-400">Deep Scan Active...</p>
                 </div>
-                <div id="confirmedGrid" class="col-span-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8"></div>
-                <div id="statusGrid" class="col-span-full grid grid-cols-2 lg:grid-cols-4 gap-3 border-t border-white/5 pt-8"></div>
             `;
             this.refreshIcons();
         }
@@ -261,29 +257,82 @@ class OSINTApp {
         this.addToHistory(query);
         this.showToast(`Scanning: ${query}`, 'info');
 
-        const searches = [];
         if (type === 'email') this.checkGravatar(query);
 
         // Render manual links IMMEDIATELY
         config.template.forEach(item => {
-            this.renderAuditStatus(item, query);
-            if (item.dork) searches.push(this.performDiscovery(item, query));
+            if (grid) this.renderAuditStatus(item, query, grid);
         });
 
-        // Timeouts
-        setTimeout(() => {
-            const loader = document.getElementById('loader');
-            if (loader) {
-                loader.innerHTML = `<p class="text-[10px] text-indigo-400 uppercase font-black tracking-widest">Scan Finalized</p>`;
-                setTimeout(() => loader.remove(), 2000);
-            }
-        }, 30000);
+        // Trigger deep SERP aggregation
+        this.performNativeDiscovery(query, grid, config);
+    }
 
-        if (searches.length > 0) {
-            Promise.allSettled(searches).then(() => {
-                const loader = document.getElementById('loader');
-                if (loader) loader.remove();
+    async performNativeDiscovery(query, grid, config) {
+        // Construct an aggressive dork based on user intent
+        const isMail = query.includes('@');
+        let searchString = `"${query}"`;
+        
+        if (!isMail && !query.includes('.') && query.includes(' ')) {
+            searchString = `"${query}" (filetype:pdf OR filetype:xls OR site:sp.gov.br OR site:jusbrasil.com.br)`;
+        }
+
+        const fallbackApis = [
+            `https://searx.be/search?q=${encodeURIComponent(searchString)}&format=json`,
+            `https://searx.space/search?q=${encodeURIComponent(searchString)}&format=json`
+        ];
+
+        let data = null;
+        for (let api of fallbackApis) {
+            try {
+                const response = await fetch(api, { cache: 'no-store' });
+                if (response.ok) {
+                    data = await response.json();
+                    if (data.results && data.results.length > 0) break;
+                }
+            } catch (e) { console.warn("API Failed: " + api); }
+        }
+
+        const loader = document.getElementById('loader');
+        if (loader) loader.remove();
+
+        if (data && data.results && data.results.length > 0) {
+            const separatorHtml = `
+            <div class="col-span-full border-b border-indigo-500/30 pb-2 mb-4 mt-8 flex items-center gap-2">
+                <i data-lucide="radar" class="w-4 h-4 text-indigo-400"></i>
+                <span class="text-[10px] font-black uppercase tracking-widest text-indigo-400">Deep Web Hits (Native SERP)</span>
+            </div>`;
+            grid.insertAdjacentHTML('afterbegin', separatorHtml);
+
+            // Render top 12 results
+            data.results.slice(0, 12).reverse().forEach(result => {
+                const isPdf = result.url.toLowerCase().endsWith('.pdf');
+                const icon = isPdf ? 'file-text' : 'link-2';
+                const color = isPdf ? 'rose' : 'indigo';
+                
+                const cardHtml = `
+                <div class="col-span-full md:col-span-2 lg:col-span-3 glass-card p-5 rounded-2xl border border-${color}-500/20 hover:border-${color}-500/60 hover:shadow-lg hover:shadow-${color}-500/10 transition-all flex flex-col h-full bg-slate-900/40">
+                    <div class="flex items-start gap-3 mb-3">
+                        <div class="p-2 bg-${color}-500/10 rounded-lg">
+                            <i data-lucide="${icon}" class="w-4 h-4 text-${color}-400"></i>
+                        </div>
+                        <h4 class="text-xs font-bold text-slate-200 line-clamp-2 leading-snug" title="${result.title}">${result.title}</h4>
+                    </div>
+                    <p class="text-[10px] text-slate-400 font-mono mb-4 line-clamp-3 leading-relaxed flex-grow opacity-80">${result.content || 'Content restricted or unavailable.'}</p>
+                    
+                    <div class="mt-auto flex justify-between items-center pt-3 border-t border-slate-800">
+                        <a href="${result.url}" target="_blank" class="text-[9px] text-${color}-400 bg-${color}-500/10 px-2 py-1 rounded-md truncate max-w-[60%] hover:underline flex items-center gap-1">
+                            <i data-lucide="external-link" class="w-3 h-3"></i> Open Source
+                        </a>
+                        <button onclick="document.getElementById('scraperUrlInput').value='${result.url}'; document.getElementById('scraperTargetInput').value='${query}'; document.getElementById('scraperUrlInput').scrollIntoView();" class="text-[9px] font-black uppercase text-rose-400 hover:text-white transition-all flex items-center gap-1 bg-rose-500/10 hover:bg-rose-500/40 px-2 py-1 rounded-md cursor-pointer">
+                            <i data-lucide="scan" class="w-3 h-3"></i> Scan
+                        </button>
+                    </div>
+                </div>
+                `;
+                grid.insertAdjacentHTML('afterbegin', cardHtml);
             });
+            this.refreshIcons();
         }
     }
 
