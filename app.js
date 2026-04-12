@@ -398,13 +398,16 @@ class OSINTApp {
                             const descLower = (profile.description || '').toLowerCase();
                             const isNotFound = titleLower.includes('404') || 
                                              titleLower.includes('page not found') || 
+                                             titleLower.includes('profile / x') ||
+                                             titleLower.includes('perfil / x') ||
+                                             (platform.id === 'twitter' && titleLower.endsWith('on x')) ||
                                              descLower.includes('não perca o que está acontecendo') ||
                                              descLower.includes('don\'t miss what\'s happening') ||
                                              descLower === 'tiktok pwa' ||
                                              profile.title.trim() === platform.name ||
                                              profile.title === 'X' ||
                                              profile.title === 'Perfil / X' ||
-                                             (platform.id === 'instagram' && (titleLower === 'instagram' || descLower.includes('login'))) ||
+                                             (platform.id === 'instagram' && (titleLower === 'instagram' || descLower.includes('login') || titleLower.includes('entrar'))) ||
                                              (platform.id === 'spotify' && (link.includes('?app=desktop') || titleLower.includes('spotify - web player')));
 
                             if (!isNotFound) {
@@ -497,12 +500,15 @@ class OSINTApp {
                         const isNotFound = titleLower.includes('404') || 
                                          titleLower.includes('page not found') || 
                                          titleLower.includes('faça o seu dia') || 
+                                         titleLower.includes('profile / x') ||
+                                         titleLower.includes('perfil / x') ||
+                                         (platform.id === 'twitter' && titleLower.endsWith('on x')) ||
                                          descLower.includes('não perca o que está acontecendo') || 
                                          descLower.includes('don\'t miss what\'s happening') ||
                                          profile.title.trim() === platform.name || 
                                          profile.title === 'X' ||
                                          profile.title === 'Perfil / X' ||
-                                         (platform.id === 'instagram' && (titleLower === 'instagram' || descLower.includes('login'))) ||
+                                         (platform.id === 'instagram' && (titleLower === 'instagram' || descLower.includes('login') || titleLower.includes('entrar'))) ||
                                          (platform.id === 'spotify' && (targetUrl.includes('?app=desktop') || titleLower.includes('spotify - web player')));
 
                         if (!isNotFound) {
