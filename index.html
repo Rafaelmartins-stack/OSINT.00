@@ -112,19 +112,58 @@
             </div>
         </main>
 
-        <!-- Results Section -->
+        <!-- Investigation Feed Section (Primary Extract) -->
+        <section id="investigationSection" class="hidden animate-in">
+            <div class="glass-card rounded-2xl p-8 mb-12 border-emerald-500/20 bg-emerald-500/5">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 border-b border-emerald-500/20 pb-6">
+                    <div>
+                        <h2 class="text-xl font-bold flex items-center gap-3 text-emerald-400">
+                            <i data-lucide="activity" class="w-5 h-5 animate-pulse"></i>
+                            Live Investigation Stream
+                        </h2>
+                        <p class="text-[10px] text-emerald-500/60 uppercase tracking-widest mt-1 font-black">Extrator de Registros Direto em Tempo Real</p>
+                    </div>
+                    <div id="globalStatus" class="flex items-center gap-3 bg-slate-950 px-4 py-2 rounded-lg border border-emerald-500/20">
+                        <div class="flex flex-col">
+                            <span class="text-[9px] text-slate-500 uppercase font-bold">Auditando Fontes</span>
+                            <div class="flex gap-1 mt-1">
+                                <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                                <div class="w-2 h-2 rounded-full bg-emerald-500/40 animate-pulse" style="animation-delay: 0.2s"></div>
+                                <div class="w-2 h-2 rounded-full bg-emerald-500/20 animate-pulse" style="animation-delay: 0.4s"></div>
+                            </div>
+                        </div>
+                        <div class="h-8 w-px bg-slate-800 mx-2"></div>
+                        <div class="flex flex-col">
+                            <span class="text-[9px] text-slate-500 uppercase font-bold">Registros</span>
+                            <span id="globalResultCount" class="text-lg font-black text-white leading-none">0</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="globalFindingsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    <!-- Streamed links will appear here -->
+                </div>
+
+                <div id="feedPagination" class="mt-12 flex justify-center hidden">
+                    <button id="loadMoreGlobal" class="bg-emerald-600 hover:bg-emerald-500 text-white px-8 py-3 rounded-full font-bold text-sm transition-all shadow-lg shadow-emerald-600/20 flex items-center gap-3">
+                        Ver Mais Resultados na Web <i data-lucide="plus-circle" class="w-5 h-5"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tools Audit Section (Secondary) -->
         <section id="resultsSection" class="hidden animate-in">
             <div class="glass-card rounded-2xl p-8 mb-12">
                 <div class="flex justify-between items-center mb-6 border-b border-slate-800 pb-4">
-                    <h2 id="resultTitle" class="text-xl font-bold flex items-center gap-3">
-                        <i data-lucide="list" class="w-5 h-5 text-purple-400"></i>
-                        Analysis Results
+                    <h2 id="resultTitle" class="text-sm font-bold flex items-center gap-3 uppercase tracking-tighter text-slate-400">
+                        Audit Catalog
                     </h2>
                     <span id="resultMeta" class="text-xs text-slate-500 mono-font">QUERY: NONE</span>
                 </div>
                 
-                <div id="resultsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <!-- Result items will be injected here -->
+                <div id="resultsGrid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                    <!-- Cards become simple status indicators -->
                 </div>
             </div>
         </section>
