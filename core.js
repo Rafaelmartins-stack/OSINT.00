@@ -7,10 +7,14 @@ const TOOLS_CONFIG = {
         title: "Person Search",
         icon: "fingerprint",
         template: [
+            { id: 'instagram', name: "Instagram", exactUrl: 'https://instagram.com/{username}' },
+            { id: 'twitter', name: "Twitter/X", exactUrl: 'https://twitter.com/{username}' },
+            { id: 'tiktok', name: "TikTok", exactUrl: 'https://tiktok.com/@{username}' },
+            { id: 'github', name: "GitHub", exactUrl: 'https://github.com/{username}' },
             { name: "Escavador", url: "https://www.escavador.com/busca?q={query}" },
             { name: "Jusbrasil", url: "https://www.jusbrasil.com.br/busca?q={query}" },
             { name: "LinkedIn", dork: 'site:linkedin.com/in/ "{query}"' },
-            { id: 'global_person', name: "Deep Web Mentions", dork: '"{query}"' }
+            { id: 'global_person', name: "Deep Mentions", dork: '"{query}"' }
         ]
     },
     domain: {
@@ -33,16 +37,16 @@ const TOOLS_CONFIG = {
         title: "Mail Intel (Identity Discovery)",
         icon: "mail",
         template: [
-            { id: 'github', name: "GitHub Matches", dork: 'site:github.com "{query}"' },
-            { id: 'instagram', name: "Instagram Matches", dork: 'site:instagram.com "{query}"' },
-            { id: 'facebook', name: "Facebook Matches", dork: 'site:facebook.com "{query}"' },
-            { id: 'twitter', name: "Twitter Matches", dork: 'site:twitter.com "{query}"' },
+            { id: 'instagram', name: "Instagram", exactUrl: 'https://instagram.com/{username}', dork: 'site:instagram.com "{query}"' },
+            { id: 'twitter', name: "Twitter/X", exactUrl: 'https://twitter.com/{username}', dork: 'site:twitter.com "{query}"' },
+            { id: 'tiktok', name: "TikTok", exactUrl: 'https://tiktok.com/@{username}', dork: 'site:tiktok.com "{query}"' },
+            { id: 'github', name: "GitHub", exactUrl: 'https://github.com/{username}', dork: 'site:github.com "{query}"' },
+            { id: 'facebook', name: "Facebook Search", exactUrl: 'https://www.facebook.com/search/people/?q={username}', dork: 'site:facebook.com "{query}"' },
+            { id: 'twitch', name: "Twitch", exactUrl: 'https://twitch.tv/{username}', dork: 'site:twitch.tv "{query}"' },
+            { id: 'youtube', name: "YouTube", exactUrl: 'https://youtube.com/@{username}', dork: 'site:youtube.com "{query}"' },
             { id: 'linkedin', name: "LinkedIn Matches", dork: 'site:linkedin.com "{query}"' },
-            { id: 'twitch', name: "Twitch Matches", dork: 'site:twitch.tv "{query}"' },
-            { id: 'tiktok', name: "TikTok Matches", dork: 'site:tiktok.com "{query}"' },
-            { id: 'youtube', name: "YouTube Matches", dork: 'site:youtube.com "{query}"' },
-            { id: 'global_mail', name: "Global Account Mentions", dork: '"{query}" -site:google.com' },
-            { id: 'leak', name: "Leak Repositories", dork: '"{query}" password OR "data leak"' }
+            { id: 'google_dork', name: "Global Mentions", dork: '"{query}" -site:google.com' },
+            { id: 'leak', name: "Leak Repos", dork: '"{query}" password OR "data leak"' }
         ]
     }
 };
@@ -266,7 +270,17 @@ class OSINTApp {
 
     renderAuditStatus(item, query, grid) {
         if (!grid) grid = document.getElementById('statusGrid');
-        const url = item.url ? item.url.replace('{query}', encodeURIComponent(query)) : `https://www.google.com/search?q=${encodeURIComponent(item.dork.replace('{query}', query))}`;
+        
+        let url;
+        const username = query.includes('@') ? query.split('@')[0] : query.replace(/\s+/g, '').toLowerCase();
+
+        if (item.exactUrl) {
+            url = item.exactUrl.replace('{username}', encodeURIComponent(username)).replace('{query}', encodeURIComponent(query));
+        } else if (item.url) {
+            url = item.url.replace('{query}', encodeURIComponent(query));
+        } else {
+            url = `https://www.google.com/search?q=${encodeURIComponent(item.dork.replace('{query}', query))}`;
+        }
         
         const anchor = document.createElement('a');
         anchor.href = url;
