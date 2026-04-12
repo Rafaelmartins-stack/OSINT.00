@@ -29,7 +29,7 @@ const TOOLS_CONFIG = {
         icon: "search",
         description: "Bases de dados oficiais e motor de extração automatizada de registros.",
         template: [
-            { name: "Listas ETEC / CTS (Direto)", url: "https://classificacao.vestibulinho.etec.sp.gov.br/", dork: 'site:classificacao.vestibulinho.etec.sp.gov.br OR site:cps.sp.gov.br "{query}"' },
+            { name: "Listas ETEC / SP (Direto)", dork: 'site:vestibulinho.etec.sp.gov.br OR site:cps.sp.gov.br "{query}" "lista de classificação"' },
             { name: "Institutos Federais (IFSP/IF)", dork: 'site:ifsp.edu.br OR site:*.edu.br "{query}" "resultado" OR "classificação"' },
             { name: "Bancas & Vestibulares", dork: '"{query}" site:org.br OR site:com.br "resultado final" OR "lista de convocação" OR "aprovados"' },
             { name: "Jusbrasil (Processos)", url: "https://www.jusbrasil.com.br/busca?q={query}", dork: 'site:jusbrasil.com.br "{query}"' },
@@ -293,14 +293,15 @@ class OSINTApp {
         this.refreshIcons();
     }
 
-    async mineDorkResults(dork, btn) {
+    async mineDorkResults(dork, btn, offset = 0) {
         const originalHtml = btn ? btn.innerHTML : null;
         if (btn) {
             btn.innerHTML = `<i data-lucide="refresh-cw" class="w-3.5 h-3.5 animate-spin"></i> Minerando...`;
             this.refreshIcons();
         }
         try {
-            const searchUrl = `https://duckduckgo.com/html/?q=${encodeURIComponent(dork)}`;
+            // Use DuckDuckGo with offset/page simulation
+            const searchUrl = `https://duckduckgo.com/html/?q=${encodeURIComponent(dork)}${offset > 0 ? `&s=${offset}` : ''}`;
             const response = await fetch(`https://api.microlink.io?url=${encodeURIComponent(searchUrl)}&data.results.selector=.result__title&data.results.type=list&data.results.attr=href`);
             const data = await response.json();
             if (data.status === 'success' && data.data.results) {
@@ -309,12 +310,13 @@ class OSINTApp {
                 if (!findingsGrid) {
                     const section = document.createElement('div');
                     section.className = 'col-span-full mt-8 animate-in';
-                    section.innerHTML = `<div class="flex items-center gap-3 mb-6"><i data-lucide="database" class="w-4 h-4 text-emerald-400"></i><h3 class="text-xs font-black uppercase tracking-widest text-emerald-400">Registros via Deep Search</h3><div class="h-px flex-1 bg-gradient-to-r from-emerald-500/30 to-transparent"></div></div><div id="deepFindingsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>`;
+                    section.innerHTML = `<div class="flex items-center gap-3 mb-6"><i data-lucide="database" class="w-4 h-4 text-emerald-400"></i><h3 class="text-xs font-black uppercase tracking-widest text-emerald-400">Registros via Deep Search</h3><div class="h-px flex-1 bg-gradient-to-r from-emerald-500/30 to-transparent"></div></div><div id="deepFindingsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div><div id="loadMoreContainer" class="col-span-full mt-6 flex justify-center"></div>`;
                     document.getElementById('resultsGrid').after(section);
                     findingsGrid = document.getElementById('deepFindingsGrid');
                     this.refreshIcons();
                 }
-                results.slice(0, 10).forEach(async (encodedLink) => {
+                
+                results.slice(0, 20).forEach(async (encodedLink) => {
                     const link = decodeURIComponent(encodedLink.split('uddg=')[1]?.split('&')[0] || encodedLink);
                     if (link.startsWith('http')) {
                         const metaRes = await fetch(`https://api.microlink.io?url=${encodeURIComponent(link)}&meta=true`);
@@ -351,6 +353,14 @@ class OSINTApp {
                         }
                     }
                 });
+
+                // Pagination Button
+                const loadMoreContainer = document.getElementById('loadMoreContainer');
+                if (loadMoreContainer) {
+                    const safeDork = dork.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+                    loadMoreContainer.innerHTML = `<button onclick="window.osintApp.mineDorkResults('${safeDork}', this, ${offset + 25})" class="bg-slate-900 hover:bg-slate-800 text-slate-400 border border-slate-800 px-6 py-2 rounded-full text-xs font-bold transition-all flex items-center gap-2">Ver mais resultados de "${dork}" <i data-lucide="plus-circle" class="w-4 h-4"></i></button>`;
+                    this.refreshIcons();
+                }
             }
         } catch (e) {} finally {
             if (btn) {
