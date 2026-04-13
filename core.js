@@ -171,10 +171,11 @@ class OSINTApp {
         }
 
         list.innerHTML = results.map(result => `
-            <a href="${result.url}" target="_blank" class="block border border-slate-700 rounded-2xl p-4 bg-slate-950/80 hover:border-indigo-500 transition-colors text-slate-100">
-                <div class="font-semibold text-[11px] truncate">${result.title || result.url}</div>
-                <div class="text-[10px] text-slate-400 break-all mt-2">${result.url}</div>
-            </a>
+            <div class="block border border-slate-700 rounded-2xl p-6 bg-slate-950/80 hover:border-indigo-500 transition-colors text-slate-100 flex flex-col h-full">
+                <div class="font-semibold text-sm text-indigo-300 mb-3">${result.title || result.url}</div>
+                <div class="text-sm text-slate-300 mb-4 flex-grow leading-relaxed">${result.content || result.snippet || 'Conteúdo disponível'}</div>
+                <a href="${result.url}" target="_blank" class="mt-4 pt-4 border-t border-slate-700 text-[11px] text-slate-500 hover:text-indigo-400 transition text-break">${result.url}</a>
+            </div>
         `).join('');
     }
 
@@ -436,19 +437,19 @@ class OSINTApp {
             const color = isPdf ? 'rose' : 'indigo';
 
             const cardHtml = `
-                <div class="col-span-full md:col-span-2 lg:col-span-3 glass-card p-5 rounded-2xl border border-${color}-500/20 hover:border-${color}-500/60 hover:shadow-lg hover:shadow-${color}-500/10 transition-all flex flex-col h-full bg-slate-900/40">
+                <div class="col-span-full md:col-span-2 lg:col-span-3 glass-card p-6 rounded-2xl border border-${color}-500/20 hover:border-${color}-500/60 hover:shadow-lg hover:shadow-${color}-500/10 transition-all flex flex-col h-full bg-slate-900/40">
                     <div class="flex items-start gap-3 mb-3">
-                        <div class="p-2 bg-${color}-500/10 rounded-lg">
+                        <div class="p-2 bg-${color}-500/10 rounded-lg flex-shrink-0">
                             <i data-lucide="${icon}" class="w-4 h-4 text-${color}-400"></i>
                         </div>
-                        <h4 class="text-xs font-bold text-slate-200 line-clamp-2 leading-snug" title="${result.title}">${result.title}</h4>
+                        <h4 class="text-sm font-bold text-slate-200 leading-snug" title="${result.title}">${result.title}</h4>
                     </div>
-                    <p class="text-[10px] text-slate-400 font-mono mb-4 line-clamp-3 leading-relaxed flex-grow opacity-80">${result.content || 'Content restricted or unavailable.'}</p>
-                    <div class="mt-auto flex justify-between items-center pt-3 border-t border-slate-800">
-                        <a href="${result.url}" target="_blank" class="text-[9px] text-${color}-400 bg-${color}-500/10 px-2 py-1 rounded-md truncate max-w-[60%] hover:underline flex items-center gap-1">
-                            <i data-lucide="external-link" class="w-3 h-3"></i> Open Source
+                    <p class="text-sm text-slate-300 mb-6 leading-relaxed flex-grow">${result.content || 'Content restricted or unavailable.'}</p>
+                    <div class="mt-auto pt-4 border-t border-slate-700 flex gap-2">
+                        <a href="${result.url}" target="_blank" class="flex-1 text-[10px] text-${color}-400 bg-${color}-500/10 px-3 py-2 rounded-md hover:bg-${color}-500/20 transition text-center font-bold uppercase flex items-center justify-center gap-1">
+                            <i data-lucide="external-link" class="w-3 h-3"></i> Link
                         </a>
-                        <button type="button" class="search-result-scan text-[9px] font-black uppercase text-rose-400 hover:text-white transition-all flex items-center gap-1 bg-rose-500/10 hover:bg-rose-500/40 px-2 py-1 rounded-md cursor-pointer" data-url="${result.url}">
+                        <button type="button" class="search-result-scan text-[10px] font-black uppercase text-rose-400 hover:text-white transition-all flex items-center justify-center gap-1 bg-rose-500/10 hover:bg-rose-500/40 px-3 py-2 rounded-md cursor-pointer">
                             <i data-lucide="scan" class="w-3 h-3"></i> Scan
                         </button>
                     </div>

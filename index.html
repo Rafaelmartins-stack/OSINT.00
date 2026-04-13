@@ -316,12 +316,11 @@
             }
 
             list.innerHTML = links.map(link => `
-                <a class="block p-4 bg-slate-950/80 border border-slate-800 rounded-2xl transition hover:border-indigo-500 hover:bg-slate-900/90"
-                    target="_blank" rel="noreferrer noopener" href="${link.url}">
-                    <p class="text-sm font-bold text-indigo-300">${escapeHtml(link.title)}</p>
-                    <p class="text-[11px] text-slate-500 mb-2">${escapeHtml(link.url)}</p>
-                    <p class="text-sm text-slate-400">${escapeHtml(link.snippet)}</p>
-                </a>
+                <div class="block p-6 bg-slate-950/80 border border-slate-800 rounded-2xl transition hover:border-indigo-500 hover:bg-slate-900/90 flex flex-col h-full">
+                    <p class="text-base font-bold text-indigo-300 mb-3">${escapeHtml(link.title)}</p>
+                    <p class="text-sm text-slate-300 mb-4 flex-grow leading-relaxed">${escapeHtml(link.snippet)}</p>
+                    <a class="mt-4 pt-4 border-t border-slate-700 text-[11px] text-slate-500 hover:text-indigo-400 transition" target="_blank" rel="noreferrer noopener" href="${link.url}">${escapeHtml(link.url)}</a>
+                </div>
             `).join('');
         }
 
@@ -339,12 +338,11 @@
             }
 
             list.innerHTML = links.map(link => `
-                <a class="block p-4 bg-slate-950/80 border border-slate-800 rounded-2xl transition hover:border-indigo-500 hover:bg-slate-900/90"
-                   target="_blank" rel="noreferrer noopener" href="${link.url}">
-                    <p class="text-sm font-bold text-indigo-300">${escapeHtml(link.title || link.url)}</p>
-                    <p class="text-[11px] text-slate-500 mb-2">${escapeHtml(link.url)}</p>
-                    <p class="text-sm text-slate-400">${escapeHtml(link.snippet)}</p>
-                </a>
+                <div class="block p-6 bg-slate-950/80 border border-slate-800 rounded-2xl transition hover:border-indigo-500 hover:bg-slate-900/90 flex flex-col h-full">
+                    <p class="text-base font-bold text-indigo-300 mb-3">${escapeHtml(link.title || link.url)}</p>
+                    <p class="text-sm text-slate-300 mb-4 flex-grow leading-relaxed">${escapeHtml(link.snippet || 'Conteúdo da página')}</p>
+                    <a class="mt-4 pt-4 border-t border-slate-700 text-[11px] text-slate-500 hover:text-indigo-400 transition text-break" target="_blank" rel="noreferrer noopener" href="${link.url}">${escapeHtml(link.url)}</a>
+                </div>
             `).join('');
         }
 
