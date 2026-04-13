@@ -292,11 +292,7 @@ class OSINTApp {
         if (titleEl) titleEl.innerHTML = `${config.title} <span class="text-xs font-normal text-slate-500">(${type})</span>`;
 
         if (grid) {
-            grid.innerHTML = `
-                <div id="loader" class="col-span-full py-8 flex flex-col items-center justify-center gap-4 animate-pulse border-b border-indigo-500/20 mb-4">
-                    <p class="text-[10px] font-black uppercase tracking-[0.4em] text-indigo-400">Deep Scan Active...</p>
-                </div>
-            `;
+            grid.innerHTML = '';
             this.refreshIcons();
         }
 
@@ -305,6 +301,7 @@ class OSINTApp {
         this.addToHistory(query);
         this.showToast(`Scanning: ${query}`, 'info');
 
+        // IMPORTANTE: Buscar dados cadastrais PRIMEIRO
         if (type === 'email') {
             this.checkGravatar(query);
             // Buscar dados cadastrais públicos
@@ -317,6 +314,10 @@ class OSINTApp {
         config.template.forEach(item => {
             if (grid) this.renderAuditStatus(item, query, grid);
         });
+
+        // Trigger deep SERP aggregation
+        this.performNativeDiscovery(query, grid, config);
+    }
 
         // Trigger deep SERP aggregation
         this.performNativeDiscovery(query, grid, config);
@@ -607,14 +608,22 @@ class OSINTApp {
     }
 
     searchPublicBrazilianDatabases(email, nameQuery) {
+        console.log("🔍 Buscando dados cadastrais para:", email, nameQuery);
+        
         const grid = document.getElementById('resultsGrid');
-        if (!grid) return;
+        if (!grid) {
+            console.error("❌ Grid não encontrado");
+            return;
+        }
 
         // Base de dados de simulação (dados públicos conhecidos)
         const publicDatasets = this.queryPublicDatasets(email, nameQuery);
         
+        console.log("📊 Datasets encontrados:", publicDatasets.length);
+        
         if (publicDatasets && publicDatasets.length > 0) {
             publicDatasets.forEach(data => {
+                console.log("✅ Renderizando:", data.company);
                 this.renderPublicDataCard(data, grid);
             });
         }
@@ -693,81 +702,82 @@ class OSINTApp {
     }
 
     renderPublicDataCard(data, grid) {
+        if (!grid) return;
+        
         // Limpar loader se existir
         const loader = grid.querySelector('#loader');
         if (loader) loader.remove();
         
-        const card = document.createElement('div');
-        card.className = "glass-card p-8 rounded-3xl border border-blue-500/40 hover:border-blue-400 bg-blue-500/5 transition-all flex flex-col gap-5 col-span-full";
+        console.log("Renderizando dados cadastrais para:", data.company);
         
-        const registrationDate = new Date(data.openDate).toLocaleDateString('pt-BR');
-        const cnpjFormatado = data.cnpj;
-        
-        card.innerHTML = `
-            <div class="flex items-start justify-between gap-4 pb-4 border-b border-blue-500/20">
-                <div class="flex items-start gap-3 flex-grow">
-                    <div class="p-3 bg-blue-500/20 rounded-lg flex-shrink-0">
-                        <i data-lucide="building-2" class="w-6 h-6 text-blue-400"></i>
+        const cardHTML = `
+            <div class="glass-card p-8 rounded-3xl border border-blue-500/40 hover:border-blue-400 bg-blue-500/5 transition-all flex flex-col gap-5 col-span-full">
+                <div class="flex items-start justify-between gap-4 pb-4 border-b border-blue-500/20">
+                    <div class="flex items-start gap-3 flex-grow">
+                        <div class="p-3 bg-blue-500/20 rounded-lg flex-shrink-0">
+                            <i data-lucide="building-2" class="w-6 h-6 text-blue-400"></i>
+                        </div>
+                        <div class="min-w-0 flex-grow">
+                            <h4 class="text-sm font-black text-blue-300 uppercase tracking-widest mb-2">Dados Cadastrais (Receita Federal)</h4>
+                            <p class="text-sm text-slate-200 font-semibold">${data.company || 'N/A'}</p>
+                        </div>
                     </div>
-                    <div class="min-w-0 flex-grow">
-                        <h4 class="text-sm font-black text-blue-300 uppercase tracking-widest mb-2">Dados Cadastrais (Receita Federal)</h4>
-                        <p class="text-sm text-slate-200 font-semibold">${data.company || 'N/A'}</p>
-                    </div>
+                    <span class="bg-blue-600/30 text-blue-300 text-[8px] px-3 py-1.5 rounded-full border border-blue-500/30 uppercase font-black flex-shrink-0">Público</span>
                 </div>
-                <span class="bg-blue-600/30 text-blue-300 text-[8px] px-3 py-1.5 rounded-full border border-blue-500/30 uppercase font-black flex-shrink-0">Público</span>
-            </div>
 
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div class="bg-slate-900/40 rounded-xl p-4">
-                    <p class="text-[9px] text-slate-400 uppercase font-bold mb-2 tracking-wide">CNPJ</p>
-                    <p class="text-sm text-blue-300 font-mono font-bold">${cnpjFormatado}</p>
-                </div>
-                <div class="bg-slate-900/40 rounded-xl p-4">
-                    <p class="text-[9px] text-slate-400 uppercase font-bold mb-2 tracking-wide">Abertura</p>
-                    <p class="text-sm text-blue-300 font-bold">${data.openDate}</p>
-                </div>
-                <div class="bg-slate-900/40 rounded-xl p-4 col-span-2 md:col-span-2">
-                    <p class="text-[9px] text-slate-400 uppercase font-bold mb-2 tracking-wide">Natureza Jurídica</p>
-                    <p class="text-sm text-blue-300 font-medium">${data.legalType}</p>
-                </div>
-                <div class="bg-slate-900/40 rounded-xl p-4 col-span-2 md:col-span-4">
-                    <p class="text-[9px] text-slate-400 uppercase font-bold mb-2 tracking-wide">Atividade Principal (CNAE)</p>
-                    <p class="text-sm text-blue-300 font-medium">${data.activity}</p>
-                </div>
-            </div>
-
-            <div class="pt-4 border-t border-blue-500/20">
-                <h5 class="text-[9px] text-slate-400 uppercase font-bold mb-4 tracking-wide flex items-center gap-2">
-                    <i data-lucide="map-pin" class="w-4 h-4 text-blue-400"></i> Localização e Contato
-                </h5>
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div class="bg-slate-950/40 p-4 rounded-lg col-span-2 md:col-span-2">
-                        <p class="text-slate-500 uppercase font-bold text-[8px] mb-2 tracking-wide">Endereço</p>
-                        <p class="text-sm text-slate-200">${data.address}</p>
+                    <div class="bg-slate-900/40 rounded-xl p-4">
+                        <p class="text-[9px] text-slate-400 uppercase font-bold mb-2 tracking-wide">CNPJ</p>
+                        <p class="text-sm text-blue-300 font-mono font-bold">${data.cnpj}</p>
                     </div>
-                    <div class="bg-slate-950/40 p-4 rounded-lg">
-                        <p class="text-slate-500 uppercase font-bold text-[8px] mb-2 tracking-wide">CEP</p>
-                        <p class="text-sm text-slate-200 font-mono">${data.zipCode}</p>
+                    <div class="bg-slate-900/40 rounded-xl p-4">
+                        <p class="text-[9px] text-slate-400 uppercase font-bold mb-2 tracking-wide">Abertura</p>
+                        <p class="text-sm text-blue-300 font-bold">${data.openDate}</p>
                     </div>
-                    <div class="bg-slate-950/40 p-4 rounded-lg">
-                        <p class="text-slate-500 uppercase font-bold text-[8px] mb-2 tracking-wide">Estado</p>
-                        <p class="text-sm text-slate-200">${data.state}</p>
+                    <div class="bg-slate-900/40 rounded-xl p-4 col-span-2 md:col-span-2">
+                        <p class="text-[9px] text-slate-400 uppercase font-bold mb-2 tracking-wide">Natureza Jurídica</p>
+                        <p class="text-sm text-blue-300 font-medium">${data.legalType}</p>
                     </div>
-                    <div class="bg-slate-950/40 p-4 rounded-lg col-span-2 md:col-span-2">
-                        <p class="text-slate-500 uppercase font-bold text-[8px] mb-2 tracking-wide">Bairro</p>
-                        <p class="text-sm text-slate-200">${data.neighborhood} - ${data.city}</p>
+                    <div class="bg-slate-900/40 rounded-xl p-4 col-span-2 md:col-span-4">
+                        <p class="text-[9px] text-slate-400 uppercase font-bold mb-2 tracking-wide">Atividade Principal (CNAE)</p>
+                        <p class="text-sm text-blue-300 font-medium">${data.activity}</p>
                     </div>
-                    ${data.phone ? `<div class="bg-slate-950/40 p-4 rounded-lg col-span-2 md:col-span-2">
-                        <p class="text-slate-500 uppercase font-bold text-[8px] mb-2 tracking-wide">Telefone</p>
-                        <p class="text-sm text-slate-200 font-mono">${data.phone}</p>
-                    </div>` : ''}
+                </div>
+
+                <div class="pt-4 border-t border-blue-500/20">
+                    <h5 class="text-[9px] text-slate-400 uppercase font-bold mb-4 tracking-wide flex items-center gap-2">
+                        <i data-lucide="map-pin" class="w-4 h-4 text-blue-400"></i> Localização e Contato
+                    </h5>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div class="bg-slate-950/40 p-4 rounded-lg col-span-2 md:col-span-2">
+                            <p class="text-slate-500 uppercase font-bold text-[8px] mb-2 tracking-wide">Endereço</p>
+                            <p class="text-sm text-slate-200">${data.address}</p>
+                        </div>
+                        <div class="bg-slate-950/40 p-4 rounded-lg">
+                            <p class="text-slate-500 uppercase font-bold text-[8px] mb-2 tracking-wide">CEP</p>
+                            <p class="text-sm text-slate-200 font-mono">${data.zipCode}</p>
+                        </div>
+                        <div class="bg-slate-950/40 p-4 rounded-lg">
+                            <p class="text-slate-500 uppercase font-bold text-[8px] mb-2 tracking-wide">Estado</p>
+                            <p class="text-sm text-slate-200">${data.state}</p>
+                        </div>
+                        <div class="bg-slate-950/40 p-4 rounded-lg col-span-2 md:col-span-2">
+                            <p class="text-slate-500 uppercase font-bold text-[8px] mb-2 tracking-wide">Bairro</p>
+                            <p class="text-sm text-slate-200">${data.neighborhood} - ${data.city}</p>
+                        </div>
+                        ${data.phone ? `<div class="bg-slate-950/40 p-4 rounded-lg col-span-2 md:col-span-2">
+                            <p class="text-slate-500 uppercase font-bold text-[8px] mb-2 tracking-wide">Telefone</p>
+                            <p class="text-sm text-slate-200 font-mono">${data.phone}</p>
+                        </div>` : ''}
+                    </div>
                 </div>
             </div>
         `;
-
-        grid.prepend(card);
         
-        // Adicionar links ao rodapé
+        // Inserir no INÍCIO do grid
+        grid.insertAdjacentHTML('afterbegin', cardHTML);
+        
+        // Adicionar link ao rodapé
         this.addPublicSourceLink({
             title: 'CNPJ.info - ' + data.company,
             url: 'https://www.cnpj.info/' + data.cnpj.replace(/[^0-9]/g, ''),
