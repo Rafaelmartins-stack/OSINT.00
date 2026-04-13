@@ -839,8 +839,21 @@ class OSINTApp {
         // Inserir no INÍCIO do grid
         console.log(`➕ Inserindo card HTML no grid`);
         grid.insertAdjacentHTML('afterbegin', cardHTML);
-        console.log(`✅ Card HTML inserido! Grid agora tem ${grid.children.length} filhos`);
-        console.log(`🔍 Card visível no DOM:`, grid.querySelector('.glass-card') ? 'SIM ✓' : 'NÃO ✗');
+        
+        // VERIFICAÇÃO CRÍTICA
+        const cardElement = grid.querySelector('.glass-card');
+        console.log(`🔍 Card foi REALMENTE inserido? ${cardElement ? 'SIM ✓✓✓' : 'NÃO ✗✗✗'}`);
+        
+        if (cardElement) {
+            console.log(`✅ Card ENCONTRADO no DOM!`);
+            console.log(`📏 Dimensões: ${cardElement.offsetWidth}x${cardElement.offsetHeight}`);
+            console.log(`👁️ Visível? ${cardElement.offsetHeight > 0 ? 'SIM' : 'NÃO (height=0)'}`);
+            console.log(`📍 Posição: ${cardElement.getBoundingClientRect().top}px do topo`);
+        } else {
+            console.error(`❌❌❌ CARD NÃO INSERIDO! Grid tem ${grid.children.length} filhos mas nenhum .glass-card encontrado!`);
+        }
+        
+        console.log(`✅ Card HTML foi inserido! Grid agora tem ${grid.children.length} filhos`);
         
         // Adicionar link ao rodapé
         console.log(`🔗 Adicionando link para footer`);
