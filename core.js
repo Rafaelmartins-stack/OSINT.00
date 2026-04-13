@@ -319,10 +319,6 @@ class OSINTApp {
         this.performNativeDiscovery(query, grid, config);
     }
 
-        // Trigger deep SERP aggregation
-        this.performNativeDiscovery(query, grid, config);
-    }
-
     async performNativeDiscovery(query, grid, config) {
         let searchString = `"${query}"`;
         
