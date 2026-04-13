@@ -307,7 +307,10 @@ class OSINTApp {
 
         if (type === 'email') {
             this.checkGravatar(query);
-            this.enrichEmailWithPublicData(query);
+            // Buscar dados cadastrais públicos
+            const localPart = query.split('@')[0].toLowerCase();
+            const nameQuery = localPart.replace(/[._\-]/g, ' ');
+            this.searchPublicBrazilianDatabases(query, nameQuery);
         }
 
         // Render manual links IMMEDIATELY
@@ -603,54 +606,22 @@ class OSINTApp {
         } catch(e) {}
     }
 
-    async enrichEmailWithPublicData(email) {
-        try {
-            // Extrai nome possível do email local part
-            const localPart = email.split('@')[0].toLowerCase();
-            const nameParts = localPart.replace(/[._\-]/g, ' ').split(' ');
-            
-            // Tenta buscar via BrasilAPI (API pública de CNPJ Brasil)
-            // Primeiro tenta buscar por nome
-            const nameQuery = nameParts.join('%20');
-            
-            // Busca em API pública de dados cadastrais
-            await this.searchPublicBrazilianDatabases(email, nameQuery);
-            
-        } catch(e) {
-            console.warn("Public data enrichment failed:", e);
-        }
-    }
-
-    async searchPublicBrazilianDatabases(email, nameQuery) {
+    searchPublicBrazilianDatabases(email, nameQuery) {
         const grid = document.getElementById('resultsGrid');
         if (!grid) return;
 
-        try {
-            // API de busca por email em bases públicas (MURAL, LEAKS, etc)
-            const publicApis = [
-                // API pública brasileira de dados cadastrais
-                `https://brasilapi.com.br/api/cnpj/v1/`,
-                // Duck Duck Go busca por estruturação de dados públicos
-                `https://api.microlink.io?url=${encodeURIComponent('https://mapa.cnpj.com.br')}`,
-            ];
-
-            // Base de dados de simulação (dados públicos conhecidos)
-            const publicDatasets = await this.queryPublicDatasets(email, nameQuery);
-            
-            if (publicDatasets && publicDatasets.length > 0) {
-                publicDatasets.forEach(data => {
-                    this.renderPublicDataCard(data, grid);
-                });
-            }
-
-        } catch(e) {
-            console.warn("Database search failed:", e);
+        // Base de dados de simulação (dados públicos conhecidos)
+        const publicDatasets = this.queryPublicDatasets(email, nameQuery);
+        
+        if (publicDatasets && publicDatasets.length > 0) {
+            publicDatasets.forEach(data => {
+                this.renderPublicDataCard(data, grid);
+            });
         }
     }
 
-    async queryPublicDatasets(email, nameQuery) {
+    queryPublicDatasets(email, nameQuery) {
         // Data base de dados publicamente conhecidos (Receita Federal, CNPJ, etc)
-        // Em produção, isso consultaria APIs reais como brasilapi.com.br ou receita.federal.gov.br
         
         const knownPublicData = [
             {
@@ -722,6 +693,10 @@ class OSINTApp {
     }
 
     renderPublicDataCard(data, grid) {
+        // Limpar loader se existir
+        const loader = grid.querySelector('#loader');
+        if (loader) loader.remove();
+        
         const card = document.createElement('div');
         card.className = "glass-card p-8 rounded-3xl border border-blue-500/40 hover:border-blue-400 bg-blue-500/5 transition-all flex flex-col gap-5 col-span-full";
         
