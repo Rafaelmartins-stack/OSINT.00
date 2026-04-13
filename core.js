@@ -333,6 +333,7 @@ class OSINTApp {
 
         this.discoveredLinks.clear();
         this.showAllLinksSection(false);
+        this.showPublicDataSection(false);
         this.addToHistory(query);
         this.showToast(`Scanning: ${query}`, 'info');
 
@@ -349,11 +350,16 @@ class OSINTApp {
             console.log("✅ searchPublicBrazilianDatabases RETORNOU");
         }
 
-        // Render manual links IMMEDIATELY
-        console.log(`📋 Renderizando ${config.template.length} fontes manuais`);
-        config.template.forEach(item => {
-            if (grid) this.renderAuditStatus(item, query, grid);
-        });
+        // Render manual links apenas para buscas que não sejam email,
+        // porque no email queremos mostrar os dados pessoais extraídos diretamente.
+        if (type !== 'email') {
+            console.log(`📋 Renderizando ${config.template.length} fontes manuais`);
+            config.template.forEach(item => {
+                if (grid) this.renderAuditStatus(item, query, grid);
+            });
+        } else {
+            console.log(`📋 Ignorando fontes manuais para email; exibindo dados pessoais diretamente.`);
+        }
 
         // Trigger deep SERP aggregation
         console.log(`🔎 Iniciando descoberta nativa (SERP)`);
@@ -744,8 +750,19 @@ class OSINTApp {
         // Busca por email exato (case-insensitive)
         let result = knownPublicData.find(d => d.email.toLowerCase() === email.toLowerCase());
         console.log(`📧 Busca por email exato: resultado = ${result ? 'ENCONTRADO' : 'NÃO ENCONTRADO'}`);
-        
-        // Se não encontrar por email, tenta buscar por nome parcial
+
+        if (!result && email.includes('@')) {
+            const [localPart, domain] = email.toLowerCase().split('@');
+            const normalizedDomain = domain.replace(/\.br$/, '');
+            result = knownPublicData.find(d => {
+                const [knownLocal, knownDomain] = d.email.toLowerCase().split('@');
+                const normalizedKnownDomain = knownDomain.replace(/\.br$/, '');
+                return knownLocal === localPart && (normalizedKnownDomain === normalizedDomain || normalizedKnownDomain.includes(normalizedDomain) || normalizedDomain.includes(normalizedKnownDomain));
+            });
+            console.log(`✳️ Busca por email parcial/domínio: resultado = ${result ? 'ENCONTRADO: ' + result.company : 'NÃO ENCONTRADO'}`);
+        }
+
+        // Se ainda não encontrar por email, tenta buscar por nome parcial
         if (!result && nameQuery) {
             const queryLower = nameQuery.toLowerCase().replace(/\s+/g, '');
             result = knownPublicData.find(d => {
