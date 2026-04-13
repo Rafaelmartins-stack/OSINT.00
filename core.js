@@ -72,22 +72,33 @@ class OSINTApp {
 
     init() {
         try {
+            console.log("🚀 Iniciando OSINT App...");
             this.setupEventListeners();
             this.renderHistory();
             this.applyTheme();
             this.refreshIcons();
-            console.log("Core v3.1 Loaded Successfully");
+            console.log("✅ Core v3.1 Loaded Successfully");
         } catch (e) {
-            console.error("Initialization failed:", e);
+            console.error("❌ Initialization failed:", e);
         }
     }
 
     refreshIcons() { if (window.lucide) window.lucide.createIcons(); }
 
     setupEventListeners() {
+        console.log("🔧 Configurando Event Listeners...");
+        
         // Search Buttons
-        document.querySelectorAll('.search-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => this.handleSearch(e.currentTarget.getAttribute('data-type')));
+        const searchBtns = document.querySelectorAll('.search-btn');
+        console.log(`📌 Encontrados ${searchBtns.length} botões de busca`);
+        
+        searchBtns.forEach(btn => {
+            const type = btn.getAttribute('data-type');
+            console.log(`➕ Adicionando listener ao botão: ${type}`);
+            btn.addEventListener('click', (e) => {
+                console.log(`🔍 Clicado em: ${type}`);
+                this.handleSearch(type);
+            });
         });
 
         // Enter Key listeners
@@ -180,6 +191,8 @@ class OSINTApp {
     }
 
     handleSearch(type) {
+        console.log(`📋 handleSearch chamado com type: ${type}`);
+        
         if (type === 'scraper') {
             const nameEl = document.getElementById('scraperTargetInput');
             const urlEl = document.getElementById('scraperUrlInput');
@@ -194,9 +207,24 @@ class OSINTApp {
         const id = type === 'email' ? 'emailInput' : 
                    (type === 'username' ? 'usernameInput' : 
                    (type === 'dorking' ? 'dorkInput' : `${type}Input`));
+        console.log(`🔎 Procurando input com ID: ${id}`);
+        
         const inputEl = document.getElementById(id);
-        if (!inputEl || !inputEl.value.trim()) return;
-        this.executeSearch(type, inputEl.value.trim());
+        if (!inputEl) {
+            console.error(`❌ Input elemento não encontrado: ${id}`);
+            return;
+        }
+        
+        const value = inputEl.value.trim();
+        console.log(`📝 Valor do input: "${value}"`);
+        
+        if (!value) {
+            console.warn(`⚠️ Input vazio para tipo: ${type}`);
+            return;
+        }
+        
+        console.log(`✅ Chamando executeSearch com type: ${type}, query: ${value}`);
+        this.executeSearch(type, value);
     }
 
     async extractDocumentEvidence(url, query) {
@@ -279,13 +307,20 @@ class OSINTApp {
     }
 
     executeSearch(type, query) {
+        console.log(`🎯 EXECUTANDO BUSCA - Type: ${type}, Query: ${query}`);
+        
         const config = TOOLS_CONFIG[type];
-        if (!config) return;
+        if (!config) {
+            console.error(`❌ Configuração não encontrada para tipo: ${type}`);
+            return;
+        }
 
         const resultsSection = document.getElementById('resultsSection');
         const grid = document.getElementById('resultsGrid');
         const metaEl = document.getElementById('resultMeta');
         const titleEl = document.getElementById('resultTitle');
+        
+        console.log(`📍 DOM Elements encontrados - section: ${!!resultsSection}, grid: ${!!grid}, meta: ${!!metaEl}, title: ${!!titleEl}`);
         
         if (resultsSection) resultsSection.classList.remove('hidden');
         if (metaEl) metaEl.textContent = `QUERY: ${query.toUpperCase()}`;
@@ -303,19 +338,23 @@ class OSINTApp {
 
         // IMPORTANTE: Buscar dados cadastrais PRIMEIRO
         if (type === 'email') {
+            console.log(`📧 Tipo EMAIL detectado - buscando dados cadastrais brasileiros`);
             this.checkGravatar(query);
             // Buscar dados cadastrais públicos
             const localPart = query.split('@')[0].toLowerCase();
             const nameQuery = localPart.replace(/[._\-]/g, ' ');
+            console.log(`🔍 Fazendo busca: email=${query}, nameQuery=${nameQuery}`);
             this.searchPublicBrazilianDatabases(query, nameQuery);
         }
 
         // Render manual links IMMEDIATELY
+        console.log(`📋 Renderizando ${config.template.length} fontes manuais`);
         config.template.forEach(item => {
             if (grid) this.renderAuditStatus(item, query, grid);
         });
 
         // Trigger deep SERP aggregation
+        console.log(`🔎 Iniciando descoberta nativa (SERP)`);
         this.performNativeDiscovery(query, grid, config);
     }
 
