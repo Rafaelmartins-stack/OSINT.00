@@ -344,7 +344,9 @@ class OSINTApp {
             const localPart = query.split('@')[0].toLowerCase();
             const nameQuery = localPart.replace(/[._\-]/g, ' ');
             console.log(`🔍 Fazendo busca: email=${query}, nameQuery=${nameQuery}`);
+            console.log("🎬 CHAMANDO searchPublicBrazilianDatabases AGORA...");
             this.searchPublicBrazilianDatabases(query, nameQuery);
+            console.log("✅ searchPublicBrazilianDatabases RETORNOU");
         }
 
         // Render manual links IMMEDIATELY
@@ -643,24 +645,34 @@ class OSINTApp {
     }
 
     searchPublicBrazilianDatabases(email, nameQuery) {
-        console.log("🔍 Buscando dados cadastrais para:", email, nameQuery);
+        console.log("\n🔍🔍🔍 INICIANDO searchPublicBrazilianDatabases 🔍🔍🔍");
+        console.log("📧 Email:", email);
+        console.log("👤 NameQuery:", nameQuery);
         
         const grid = document.getElementById('resultsGrid');
+        console.log("🔎 Grid encontrado?", !!grid);
+        
         if (!grid) {
-            console.error("❌ Grid não encontrado");
+            console.error("❌❌❌ CRÍTICO: Grid NÃO ENCONTRADO! Não posso renderizar card!");
             return;
         }
+        
+        console.log(`📊 Grid existe com ${grid.children.length} filhos atuais`);
 
         // Base de dados de simulação (dados públicos conhecidos)
         const publicDatasets = this.queryPublicDatasets(email, nameQuery);
         
-        console.log("📊 Datasets encontrados:", publicDatasets.length);
+        console.log(`📊 Datasets retornados: ${publicDatasets.length} resultado(s)`);
         
         if (publicDatasets && publicDatasets.length > 0) {
-            publicDatasets.forEach(data => {
-                console.log("✅ Renderizando:", data.company);
+            console.log(`\n✅ ENCONTRADO ${publicDatasets.length} resultado(s)! Renderizando...`);
+            publicDatasets.forEach((data, idx) => {
+                console.log(`\n➡️ Renderizando resultado ${idx + 1}: ${data.company}`);
                 this.renderPublicDataCard(data, grid);
             });
+            console.log(`\n✅ FINALIZADO! Grid agora tem ${grid.children.length} filhos`);
+        } else {
+            console.warn("⚠️ Nenhum resultado encontrado na base de dados");
         }
     }
 
