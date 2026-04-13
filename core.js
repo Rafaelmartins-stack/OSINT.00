@@ -680,11 +680,28 @@ class OSINTApp {
             console.log(`\n✅ ENCONTRADO resultado: ${data.company} (${data.ownerName || 'N/A'})`);
             this.renderPublicDataSection(data);
             this.showPublicDataSection(true);
-            this.addPublicSourceLink({
-                title: 'CNPJ.info - ' + data.company,
-                url: 'https://www.cnpj.info/' + data.cnpj.replace(/[^0-9]/g, ''),
-                description: data.cnpj
-            });
+            
+            let linkTitle = 'Dados Públicos';
+            let linkUrl = '';
+            let linkDesc = '';
+            
+            if (data.cnpj && data.cnpj.trim()) {
+                linkUrl = 'https://www.cnpj.info/' + data.cnpj.replace(/[^0-9]/g, '');
+                linkDesc = data.cnpj;
+                linkTitle = 'CNPJ.info - ' + data.company;
+            } else if (data.cpf && data.cpf.trim()) {
+                linkUrl = 'https://cpf.info/' + data.cpf.replace(/[^0-9]/g, '');
+                linkDesc = data.cpf;
+                linkTitle = 'CPF - ' + data.ownerName;
+            }
+            
+            if (linkUrl) {
+                this.addPublicSourceLink({
+                    title: linkTitle,
+                    url: linkUrl,
+                    description: linkDesc
+                });
+            }
 
             console.log(`\n✅ FINALIZADO! Public data section renderizada`);
         } else {
@@ -715,7 +732,8 @@ class OSINTApp {
                 state: 'SP',
                 phone: '',
                 email: 'mr.fmartins@yahoo.com.br',
-                entityType: 'Empresa'
+                entityType: 'Empresa',
+                cpf: ''
             },
             {
                 email: 'fernando.martins@example.com',
@@ -733,7 +751,8 @@ class OSINTApp {
                 state: 'SP',
                 phone: '',
                 email: 'fernando.martins@example.com',
-                entityType: 'Empresa'
+                entityType: 'Empresa',
+                cpf: ''
             },
             {
                 email: 'contato@empresa.com.br',
@@ -751,7 +770,27 @@ class OSINTApp {
                 state: 'SP',
                 phone: '(11) 3000-0000',
                 email: 'contato@empresa.com.br',
-                entityType: 'Empresa'
+                entityType: 'Empresa',
+                cpf: ''
+            },
+            {
+                email: 'shirlei@advocaciasmm.com.br',
+                ownerName: 'Shiriei Maria da Silva Martins',
+                cnpj: '',
+                company: 'Shiriei Maria da Silva Martins - Sociedade Individual de Advocacia',
+                legalType: 'Profissional Liberal / Advogada',
+                activity: 'Atividades jurídicas, contabilidade e auditoria',
+                cnae: '69.10-0-00',
+                openDate: '25/03/2026',
+                address: 'Rua a definir',
+                zipCode: '',
+                neighborhood: '',
+                city: 'São Paulo',
+                state: 'SP',
+                phone: '(11) XXXX-7880',
+                email: 'shirlei@advocaciasmm.com.br',
+                entityType: 'Profissional',
+                cpf: '181.724.618-60'
             }
         ];
 
@@ -945,7 +984,15 @@ class OSINTApp {
             return;
         }
 
-        const sourceUrl = `https://www.cnpj.info/${data.cnpj.replace(/[^0-9]/g, '')}`;
+        let sourceUrl = '';
+        if (data.cnpj && data.cnpj.trim()) {
+            sourceUrl = `https://www.cnpj.info/${data.cnpj.replace(/[^0-9]/g, '')}`;
+        } else if (data.cpf && data.cpf.trim()) {
+            sourceUrl = `https://www.cpf.info/${data.cpf.replace(/[^0-9]/g, '')}`;
+        } else {
+            sourceUrl = `https://www.google.com/search?q=${encodeURIComponent(data.email)}`;
+        }
+
         container.innerHTML = `
             <div class="glass-card p-8 rounded-3xl border border-slate-800 bg-slate-950/90 transition-all">
                 <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -961,6 +1008,14 @@ class OSINTApp {
                 <div class="overflow-x-auto mt-6">
                     <table class="min-w-full text-left border-separate border-spacing-y-3">
                         <tbody>
+                            ${data.cpf ? `<tr class="bg-slate-900/70 rounded-2xl">
+                                <th class="px-4 py-4 text-[10px] uppercase tracking-widest text-slate-500 align-top">CPF</th>
+                                <td class="px-4 py-4 text-sm text-slate-100 font-mono">${data.cpf}</td>
+                            </tr>` : ''}
+                            ${data.cnpj ? `<tr class="bg-slate-900/70 rounded-2xl">
+                                <th class="px-4 py-4 text-[10px] uppercase tracking-widest text-slate-500 align-top">CNPJ</th>
+                                <td class="px-4 py-4 text-sm text-slate-100 font-mono">${data.cnpj}</td>
+                            </tr>` : ''}
                             <tr class="bg-slate-900/70 rounded-2xl">
                                 <th class="px-4 py-4 text-[10px] uppercase tracking-widest text-slate-500 align-top">Natureza Jurídica</th>
                                 <td class="px-4 py-4 text-sm text-slate-100">${data.legalType}</td>
@@ -973,22 +1028,22 @@ class OSINTApp {
                                 <th class="px-4 py-4 text-[10px] uppercase tracking-widest text-slate-500 align-top">Abertura</th>
                                 <td class="px-4 py-4 text-sm text-slate-100">${data.openDate}</td>
                             </tr>
-                            <tr class="bg-slate-900/70 rounded-2xl">
+                            ${data.address ? `<tr class="bg-slate-900/70 rounded-2xl">
                                 <th class="px-4 py-4 text-[10px] uppercase tracking-widest text-slate-500 align-top">Endereço</th>
                                 <td class="px-4 py-4 text-sm text-slate-100">${data.address}</td>
-                            </tr>
-                            <tr class="bg-slate-900/70 rounded-2xl">
+                            </tr>` : ''}
+                            ${data.neighborhood ? `<tr class="bg-slate-900/70 rounded-2xl">
                                 <th class="px-4 py-4 text-[10px] uppercase tracking-widest text-slate-500 align-top">Bairro</th>
                                 <td class="px-4 py-4 text-sm text-slate-100">${data.neighborhood}</td>
-                            </tr>
+                            </tr>` : ''}
                             <tr class="bg-slate-900/70 rounded-2xl">
                                 <th class="px-4 py-4 text-[10px] uppercase tracking-widest text-slate-500 align-top">Cidade / UF</th>
                                 <td class="px-4 py-4 text-sm text-slate-100">${data.city} / ${data.state}</td>
                             </tr>
-                            <tr class="bg-slate-900/70 rounded-2xl">
+                            ${data.zipCode ? `<tr class="bg-slate-900/70 rounded-2xl">
                                 <th class="px-4 py-4 text-[10px] uppercase tracking-widest text-slate-500 align-top">CEP</th>
                                 <td class="px-4 py-4 text-sm text-slate-100">${data.zipCode}</td>
-                            </tr>
+                            </tr>` : ''}
                             ${data.phone ? `<tr class="bg-slate-900/70 rounded-2xl">
                                 <th class="px-4 py-4 text-[10px] uppercase tracking-widest text-slate-500 align-top">Telefone</th>
                                 <td class="px-4 py-4 text-sm text-slate-100 font-mono">${data.phone}</td>
