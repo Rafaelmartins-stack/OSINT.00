@@ -11,7 +11,7 @@
     <script src="https://unpkg.com/lucide@0.400.0/dist/umd/lucide.min.js" defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-    <script src="core.js?v=4.6.1" defer></script>
+    <script src="core.js?v=4.6.2" defer></script>
 </head>
 <body class="bg-slate-950 text-slate-100">
     <div class="fixed top-0 left-0 w-full h-full pointer-events-none -z-10 overflow-hidden">
@@ -27,7 +27,7 @@
                 </div>
                 <div>
                     <h1 class="text-3xl font-black text-indigo-500 tracking-tight">OSINT Toolkit</h1>
-                    <p class="text-emerald-400 font-bold text-sm">v4.0.0 Platinum • True Reverse Edition</p>
+                    <p class="text-emerald-400 font-bold text-sm">v4.6.2 Platinum • True Reverse Edition</p>
                 </div>
             </div>
             <div class="flex items-center gap-4">
@@ -112,6 +112,11 @@
                     </h2>
                     <span id="resultMeta" class="text-xs text-slate-500 mono-font font-black">QUERY: NONE</span>
                 </div>
+
+                <div id="publicDataSection" class="hidden mb-6">
+                    <div id="publicDataContainer" class="grid gap-3"></div>
+                </div>
+
                 <div id="resultsGrid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3"></div>
 
                 <div id="googleLinksSection" class="hidden mt-8">

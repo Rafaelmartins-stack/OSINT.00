@@ -77,7 +77,7 @@ class OSINTApp {
             this.renderHistory();
             this.applyTheme();
             this.refreshIcons();
-            console.log("✅ Core v3.1 Loaded Successfully");
+            console.log("✅ Core v4.6.2 Loaded Successfully");
         } catch (e) {
             console.error("❌ Initialization failed:", e);
         }
@@ -665,14 +665,20 @@ class OSINTApp {
         console.log(`📊 Datasets retornados: ${publicDatasets.length} resultado(s)`);
         
         if (publicDatasets && publicDatasets.length > 0) {
-            console.log(`\n✅ ENCONTRADO ${publicDatasets.length} resultado(s)! Renderizando...`);
-            publicDatasets.forEach((data, idx) => {
-                console.log(`\n➡️ Renderizando resultado ${idx + 1}: ${data.company}`);
-                this.renderPublicDataCard(data, grid);
+            const data = publicDatasets[0];
+            console.log(`\n✅ ENCONTRADO resultado: ${data.company}`);
+            this.renderPublicDataSection(data);
+            this.showPublicDataSection(true);
+            this.addPublicSourceLink({
+                title: 'CNPJ.info - ' + data.company,
+                url: 'https://www.cnpj.info/' + data.cnpj.replace(/[^0-9]/g, ''),
+                description: data.cnpj
             });
-            console.log(`\n✅ FINALIZADO! Grid agora tem ${grid.children.length} filhos`);
+
+            console.log(`\n✅ FINALIZADO! Public data section renderizada`);
         } else {
             console.warn("⚠️ Nenhum resultado encontrado na base de dados");
+            this.showPublicDataSection(false);
         }
     }
 
@@ -887,6 +893,85 @@ class OSINTApp {
         `;
         
         list.appendChild(card);
+        this.refreshIcons();
+    }
+
+    showPublicDataSection(show) {
+        const section = document.getElementById('publicDataSection');
+        if (!section) return;
+        section.classList.toggle('hidden', !show);
+    }
+
+    renderPublicDataSection(data) {
+        const container = document.getElementById('publicDataContainer');
+        if (!container) {
+            console.error('❌ publicDataContainer não encontrado');
+            return;
+        }
+
+        const sourceUrl = `https://www.cnpj.info/${data.cnpj.replace(/[^0-9]/g, '')}`;
+        container.innerHTML = `
+            <div class="glass-card p-8 rounded-3xl border border-slate-800 bg-slate-950/90 transition-all">
+                <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div>
+                        <p class="text-[10px] uppercase tracking-widest font-black text-slate-500 mb-2">Dados Cadastrais</p>
+                        <h3 class="text-2xl text-slate-100 font-black mb-2">${data.company}</h3>
+                        <p class="text-sm text-slate-400">CNPJ: <span class="font-mono text-slate-200">${data.cnpj}</span></p>
+                    </div>
+                    <span class="inline-flex items-center gap-2 rounded-full bg-emerald-500/10 px-4 py-2 text-[10px] uppercase font-black tracking-widest text-emerald-300 border border-emerald-500/30">Fonte Pública</span>
+                </div>
+
+                <div class="overflow-x-auto mt-6">
+                    <table class="min-w-full text-left border-separate border-spacing-y-3">
+                        <tbody>
+                            <tr class="bg-slate-900/70 rounded-2xl">
+                                <th class="px-4 py-4 text-[10px] uppercase tracking-widest text-slate-500 align-top">Natureza Jurídica</th>
+                                <td class="px-4 py-4 text-sm text-slate-100">${data.legalType}</td>
+                            </tr>
+                            <tr class="bg-slate-900/70 rounded-2xl">
+                                <th class="px-4 py-4 text-[10px] uppercase tracking-widest text-slate-500 align-top">Atividade (CNAE)</th>
+                                <td class="px-4 py-4 text-sm text-slate-100">${data.activity} <span class="text-slate-500">(${data.cnae})</span></td>
+                            </tr>
+                            <tr class="bg-slate-900/70 rounded-2xl">
+                                <th class="px-4 py-4 text-[10px] uppercase tracking-widest text-slate-500 align-top">Abertura</th>
+                                <td class="px-4 py-4 text-sm text-slate-100">${data.openDate}</td>
+                            </tr>
+                            <tr class="bg-slate-900/70 rounded-2xl">
+                                <th class="px-4 py-4 text-[10px] uppercase tracking-widest text-slate-500 align-top">Endereço</th>
+                                <td class="px-4 py-4 text-sm text-slate-100">${data.address}</td>
+                            </tr>
+                            <tr class="bg-slate-900/70 rounded-2xl">
+                                <th class="px-4 py-4 text-[10px] uppercase tracking-widest text-slate-500 align-top">Bairro</th>
+                                <td class="px-4 py-4 text-sm text-slate-100">${data.neighborhood}</td>
+                            </tr>
+                            <tr class="bg-slate-900/70 rounded-2xl">
+                                <th class="px-4 py-4 text-[10px] uppercase tracking-widest text-slate-500 align-top">Cidade / UF</th>
+                                <td class="px-4 py-4 text-sm text-slate-100">${data.city} / ${data.state}</td>
+                            </tr>
+                            <tr class="bg-slate-900/70 rounded-2xl">
+                                <th class="px-4 py-4 text-[10px] uppercase tracking-widest text-slate-500 align-top">CEP</th>
+                                <td class="px-4 py-4 text-sm text-slate-100">${data.zipCode}</td>
+                            </tr>
+                            ${data.phone ? `<tr class="bg-slate-900/70 rounded-2xl">
+                                <th class="px-4 py-4 text-[10px] uppercase tracking-widest text-slate-500 align-top">Telefone</th>
+                                <td class="px-4 py-4 text-sm text-slate-100 font-mono">${data.phone}</td>
+                            </tr>` : ''}
+                            <tr class="bg-slate-900/70 rounded-2xl">
+                                <th class="px-4 py-4 text-[10px] uppercase tracking-widest text-slate-500 align-top">E-mail</th>
+                                <td class="px-4 py-4 text-sm text-slate-100 font-mono">${data.email}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="mt-6 pt-4 border-t border-slate-800">
+                    <p class="text-[10px] uppercase tracking-widest text-slate-500 font-black mb-2">Link da fonte com os dados reais</p>
+                    <a href="${sourceUrl}" target="_blank" rel="noopener noreferrer" class="block rounded-2xl bg-slate-900/80 border border-slate-700 px-4 py-4 text-sm text-sky-300 hover:bg-slate-900 transition-all break-words">
+                        ${sourceUrl}
+                    </a>
+                </div>
+            </div>
+        `;
         this.refreshIcons();
     }
 
