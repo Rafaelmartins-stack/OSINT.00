@@ -338,13 +338,18 @@ class OSINTApp {
         this.showToast(`Scanning: ${query}`, 'info');
 
         // IMPORTANTE: Buscar dados cadastrais PRIMEIRO
-        if (type === 'email') {
-            console.log(`📧 Tipo EMAIL detectado - buscando dados cadastrais brasileiros`);
-            this.checkGravatar(query);
-            // Buscar dados cadastrais públicos
+        if (type === 'email' || type === 'username') {
+            const isEmail = type === 'email';
+            if (isEmail) {
+                console.log(`📧 Tipo EMAIL detectado - buscando dados cadastrais brasileiros`);
+                this.checkGravatar(query);
+            } else {
+                console.log(`👤 Tipo USERNAME detectado - buscando dados pessoais por nome`);
+            }
+            // Buscar dados cadastrais públicos ou por nome
             const localPart = query.split('@')[0].toLowerCase();
             const nameQuery = localPart.replace(/[._\-]/g, ' ');
-            console.log(`🔍 Fazendo busca: email=${query}, nameQuery=${nameQuery}`);
+            console.log(`🔍 Fazendo busca: query=${query}, nameQuery=${nameQuery}`);
             console.log("🎬 CHAMANDO searchPublicBrazilianDatabases AGORA...");
             this.searchPublicBrazilianDatabases(query, nameQuery);
             console.log("✅ searchPublicBrazilianDatabases RETORNOU");
@@ -672,7 +677,7 @@ class OSINTApp {
         
         if (publicDatasets && publicDatasets.length > 0) {
             const data = publicDatasets[0];
-            console.log(`\n✅ ENCONTRADO resultado: ${data.company}`);
+            console.log(`\n✅ ENCONTRADO resultado: ${data.company} (${data.ownerName || 'N/A'})`);
             this.renderPublicDataSection(data);
             this.showPublicDataSection(true);
             this.addPublicSourceLink({
@@ -696,6 +701,7 @@ class OSINTApp {
         const knownPublicData = [
             {
                 email: 'mr.fmartins@yahoo.com.br',
+                ownerName: 'Fernando Martins',
                 cnpj: '54.780.998/0001-13',
                 company: '54.780.998 Fernando Martins',
                 legalType: 'Empresário (individual)',
@@ -713,6 +719,7 @@ class OSINTApp {
             },
             {
                 email: 'fernando.martins@example.com',
+                ownerName: 'Fernando Martins',
                 cnpj: '54.780.998/0001-13',
                 company: 'Fernando Martins Tech',
                 legalType: 'Empresário (individual)',
@@ -730,6 +737,7 @@ class OSINTApp {
             },
             {
                 email: 'contato@empresa.com.br',
+                ownerName: 'Empresa Exemplo',
                 cnpj: '12.345.678/0001-90',
                 company: 'Empresa Exemplo LTDA',
                 legalType: 'Sociedade Limitada',
@@ -747,27 +755,38 @@ class OSINTApp {
             }
         ];
 
-        // Busca por email exato (case-insensitive)
-        let result = knownPublicData.find(d => d.email.toLowerCase() === email.toLowerCase());
-        console.log(`📧 Busca por email exato: resultado = ${result ? 'ENCONTRADO' : 'NÃO ENCONTRADO'}`);
+        let result = null;
+        const queryLower = email.toLowerCase().trim();
 
-        if (!result && email.includes('@')) {
-            const [localPart, domain] = email.toLowerCase().split('@');
-            const normalizedDomain = domain.replace(/\.br$/, '');
-            result = knownPublicData.find(d => {
-                const [knownLocal, knownDomain] = d.email.toLowerCase().split('@');
-                const normalizedKnownDomain = knownDomain.replace(/\.br$/, '');
-                return knownLocal === localPart && (normalizedKnownDomain === normalizedDomain || normalizedKnownDomain.includes(normalizedDomain) || normalizedDomain.includes(normalizedKnownDomain));
-            });
-            console.log(`✳️ Busca por email parcial/domínio: resultado = ${result ? 'ENCONTRADO: ' + result.company : 'NÃO ENCONTRADO'}`);
+        if (queryLower.includes('@')) {
+            // Busca por email exato (case-insensitive)
+            result = knownPublicData.find(d => d.email.toLowerCase() === queryLower);
+            console.log(`📧 Busca por email exato: resultado = ${result ? 'ENCONTRADO' : 'NÃO ENCONTRADO'}`);
+
+            if (!result) {
+                const [localPart, domain] = queryLower.split('@');
+                const normalizedDomain = domain.replace(/\.br$/, '');
+                result = knownPublicData.find(d => {
+                    const [knownLocal, knownDomain] = d.email.toLowerCase().split('@');
+                    const normalizedKnownDomain = knownDomain.replace(/\.br$/, '');
+                    return knownLocal === localPart && (normalizedKnownDomain === normalizedDomain || normalizedKnownDomain.includes(normalizedDomain) || normalizedDomain.includes(normalizedKnownDomain));
+                });
+                console.log(`✳️ Busca por email parcial/domínio: resultado = ${result ? 'ENCONTRADO: ' + result.company : 'NÃO ENCONTRADO'}`);
+            }
         }
 
-        // Se ainda não encontrar por email, tenta buscar por nome parcial
         if (!result && nameQuery) {
-            const queryLower = nameQuery.toLowerCase().replace(/\s+/g, '');
+            const normalizedQuery = nameQuery.toLowerCase().replace(/\s+/g, '');
             result = knownPublicData.find(d => {
+                const ownerLower = (d.ownerName || '').toLowerCase().replace(/\s+/g, '');
                 const companyLower = d.company.toLowerCase().replace(/\s+/g, '');
-                return companyLower.includes(queryLower) || queryLower.includes(companyLower);
+                const emailLocal = (d.email || '').toLowerCase().split('@')[0].replace(/[._\-]/g, '');
+                return ownerLower.includes(normalizedQuery)
+                    || normalizedQuery.includes(ownerLower)
+                    || companyLower.includes(normalizedQuery)
+                    || normalizedQuery.includes(companyLower)
+                    || emailLocal.includes(normalizedQuery)
+                    || normalizedQuery.includes(emailLocal);
             });
             console.log(`🏢 Busca por nome: "${nameQuery}" → resultado = ${result ? 'ENCONTRADO: ' + result.company : 'NÃO ENCONTRADO'}`);
         }
@@ -932,7 +951,8 @@ class OSINTApp {
                 <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                     <div>
                         <p class="text-[10px] uppercase tracking-widest font-black text-slate-500 mb-2">Dados Cadastrais</p>
-                        <h3 class="text-2xl text-slate-100 font-black mb-2">${data.company}</h3>
+                        <h3 class="text-2xl text-slate-100 font-black mb-1">${data.company}</h3>
+                        <p class="text-sm text-slate-400 mb-1">Proprietário / Nome: <span class="text-slate-200">${data.ownerName || 'N/A'}</span></p>
                         <p class="text-sm text-slate-400">CNPJ: <span class="font-mono text-slate-200">${data.cnpj}</span></p>
                     </div>
                     <span class="inline-flex items-center gap-2 rounded-full bg-emerald-500/10 px-4 py-2 text-[10px] uppercase font-black tracking-widest text-emerald-300 border border-emerald-500/30">Fonte Pública</span>
