@@ -772,66 +772,68 @@ class OSINTApp {
         
         console.log("📝 Renderizando dados cadastrais para:", data.company);
         
+        const sourceUrl = `https://www.cnpj.info/${data.cnpj.replace(/[^0-9]/g, '')}`;
         const cardHTML = `
-            <div class="glass-card p-8 rounded-3xl border border-blue-500/40 hover:border-blue-400 bg-blue-500/5 transition-all flex flex-col gap-5 col-span-full">
-                <div class="flex items-start justify-between gap-4 pb-4 border-b border-blue-500/20">
-                    <div class="flex items-start gap-3 flex-grow">
-                        <div class="p-3 bg-blue-500/20 rounded-lg flex-shrink-0">
-                            <i data-lucide="building-2" class="w-6 h-6 text-blue-400"></i>
-                        </div>
-                        <div class="min-w-0 flex-grow">
-                            <h4 class="text-sm font-black text-blue-300 uppercase tracking-widest mb-2">Dados Cadastrais (Receita Federal)</h4>
-                            <p class="text-sm text-slate-200 font-semibold">${data.company || 'N/A'}</p>
-                        </div>
+            <div class="glass-card p-8 rounded-3xl border border-slate-800 bg-slate-950/90 transition-all col-span-full">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-4 border-b border-slate-800">
+                    <div>
+                        <p class="text-[10px] uppercase tracking-widest font-black text-slate-500 mb-2">Dados Cadastrais (Receita Federal)</p>
+                        <h4 class="text-2xl font-black text-slate-100 mb-2">${data.company || 'N/A'}</h4>
+                        <p class="text-sm text-slate-400">CNPJ: <span class="font-mono text-slate-200">${data.cnpj}</span></p>
                     </div>
-                    <span class="bg-blue-600/30 text-blue-300 text-[8px] px-3 py-1.5 rounded-full border border-blue-500/30 uppercase font-black flex-shrink-0">Público</span>
+                    <span class="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-[10px] uppercase font-black tracking-widest text-emerald-300">Público</span>
                 </div>
 
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div class="bg-slate-900/40 rounded-xl p-4">
-                        <p class="text-[9px] text-slate-400 uppercase font-bold mb-2 tracking-wide">CNPJ</p>
-                        <p class="text-sm text-blue-300 font-mono font-bold">${data.cnpj}</p>
-                    </div>
-                    <div class="bg-slate-900/40 rounded-xl p-4">
-                        <p class="text-[9px] text-slate-400 uppercase font-bold mb-2 tracking-wide">Abertura</p>
-                        <p class="text-sm text-blue-300 font-bold">${data.openDate}</p>
-                    </div>
-                    <div class="bg-slate-900/40 rounded-xl p-4 col-span-2 md:col-span-2">
-                        <p class="text-[9px] text-slate-400 uppercase font-bold mb-2 tracking-wide">Natureza Jurídica</p>
-                        <p class="text-sm text-blue-300 font-medium">${data.legalType}</p>
-                    </div>
-                    <div class="bg-slate-900/40 rounded-xl p-4 col-span-2 md:col-span-4">
-                        <p class="text-[9px] text-slate-400 uppercase font-bold mb-2 tracking-wide">Atividade Principal (CNAE)</p>
-                        <p class="text-sm text-blue-300 font-medium">${data.activity}</p>
-                    </div>
+                <div class="overflow-x-auto mt-6">
+                    <table class="min-w-full text-left border-separate border-spacing-y-3">
+                        <tbody>
+                            <tr class="bg-slate-900/70 rounded-2xl">
+                                <th class="px-4 py-4 text-[10px] uppercase tracking-widest text-slate-500 align-top">Natureza Jurídica</th>
+                                <td class="px-4 py-4 text-sm text-slate-100">${data.legalType}</td>
+                            </tr>
+                            <tr class="bg-slate-900/70 rounded-2xl">
+                                <th class="px-4 py-4 text-[10px] uppercase tracking-widest text-slate-500 align-top">Atividade (CNAE)</th>
+                                <td class="px-4 py-4 text-sm text-slate-100">${data.activity} <span class="text-slate-500">(${data.cnae})</span></td>
+                            </tr>
+                            <tr class="bg-slate-900/70 rounded-2xl">
+                                <th class="px-4 py-4 text-[10px] uppercase tracking-widest text-slate-500 align-top">Abertura</th>
+                                <td class="px-4 py-4 text-sm text-slate-100">${data.openDate}</td>
+                            </tr>
+                            <tr class="bg-slate-900/70 rounded-2xl">
+                                <th class="px-4 py-4 text-[10px] uppercase tracking-widest text-slate-500 align-top">Endereço Completo</th>
+                                <td class="px-4 py-4 text-sm text-slate-100">${data.address}</td>
+                            </tr>
+                            <tr class="bg-slate-900/70 rounded-2xl">
+                                <th class="px-4 py-4 text-[10px] uppercase tracking-widest text-slate-500 align-top">Bairro</th>
+                                <td class="px-4 py-4 text-sm text-slate-100">${data.neighborhood}</td>
+                            </tr>
+                            <tr class="bg-slate-900/70 rounded-2xl">
+                                <th class="px-4 py-4 text-[10px] uppercase tracking-widest text-slate-500 align-top">Cidade / UF</th>
+                                <td class="px-4 py-4 text-sm text-slate-100">${data.city} / ${data.state}</td>
+                            </tr>
+                            <tr class="bg-slate-900/70 rounded-2xl">
+                                <th class="px-4 py-4 text-[10px] uppercase tracking-widest text-slate-500 align-top">CEP</th>
+                                <td class="px-4 py-4 text-sm text-slate-100">${data.zipCode}</td>
+                            </tr>
+                            ${data.phone ? `<tr class="bg-slate-900/70 rounded-2xl">
+                                <th class="px-4 py-4 text-[10px] uppercase tracking-widest text-slate-500 align-top">Telefone</th>
+                                <td class="px-4 py-4 text-sm text-slate-100 font-mono">${data.phone}</td>
+                            </tr>` : ''}
+                            <tr class="bg-slate-900/70 rounded-2xl">
+                                <th class="px-4 py-4 text-[10px] uppercase tracking-widest text-slate-500 align-top">E-mail</th>
+                                <td class="px-4 py-4 text-sm text-slate-100 font-mono">${data.email}</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
 
-                <div class="pt-4 border-t border-blue-500/20">
-                    <h5 class="text-[9px] text-slate-400 uppercase font-bold mb-4 tracking-wide flex items-center gap-2">
-                        <i data-lucide="map-pin" class="w-4 h-4 text-blue-400"></i> Localização e Contato
-                    </h5>
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div class="bg-slate-950/40 p-4 rounded-lg col-span-2 md:col-span-2">
-                            <p class="text-slate-500 uppercase font-bold text-[8px] mb-2 tracking-wide">Endereço</p>
-                            <p class="text-sm text-slate-200">${data.address}</p>
-                        </div>
-                        <div class="bg-slate-950/40 p-4 rounded-lg">
-                            <p class="text-slate-500 uppercase font-bold text-[8px] mb-2 tracking-wide">CEP</p>
-                            <p class="text-sm text-slate-200 font-mono">${data.zipCode}</p>
-                        </div>
-                        <div class="bg-slate-950/40 p-4 rounded-lg">
-                            <p class="text-slate-500 uppercase font-bold text-[8px] mb-2 tracking-wide">Estado</p>
-                            <p class="text-sm text-slate-200">${data.state}</p>
-                        </div>
-                        <div class="bg-slate-950/40 p-4 rounded-lg col-span-2 md:col-span-2">
-                            <p class="text-slate-500 uppercase font-bold text-[8px] mb-2 tracking-wide">Bairro</p>
-                            <p class="text-sm text-slate-200">${data.neighborhood} - ${data.city}</p>
-                        </div>
-                        ${data.phone ? `<div class="bg-slate-950/40 p-4 rounded-lg col-span-2 md:col-span-2">
-                            <p class="text-slate-500 uppercase font-bold text-[8px] mb-2 tracking-wide">Telefone</p>
-                            <p class="text-sm text-slate-200 font-mono">${data.phone}</p>
-                        </div>` : ''}
-                    </div>
+                <div class="mt-6 pt-4 border-t border-slate-800">
+                    <p class="text-[10px] uppercase tracking-widest font-black text-slate-500 mb-2">Fonte Original</p>
+                    <a href="${sourceUrl}" target="_blank" rel="noopener noreferrer" class="inline-flex flex-col gap-1 px-4 py-4 rounded-2xl bg-slate-900/80 border border-slate-700 text-sm text-sky-300 hover:bg-slate-900 transition-all break-words">
+                        <span class="font-bold">Fonte de Dados</span>
+                        <span class="text-xs text-slate-400">Clique para abrir o site com as informações reais</span>
+                        <span class="text-xs text-slate-300 font-mono">${sourceUrl}</span>
+                    </a>
                 </div>
             </div>
         `;
