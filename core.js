@@ -665,6 +665,8 @@ class OSINTApp {
     }
 
     queryPublicDatasets(email, nameQuery) {
+        console.log(`🔎 queryPublicDatasets buscando por email: "${email}" ou nome: "${nameQuery}"`);
+        
         // Data base de dados publicamente conhecidos (Receita Federal, CNPJ, etc)
         
         const knownPublicData = [
@@ -723,6 +725,7 @@ class OSINTApp {
 
         // Busca por email exato (case-insensitive)
         let result = knownPublicData.find(d => d.email.toLowerCase() === email.toLowerCase());
+        console.log(`📧 Busca por email exato: resultado = ${result ? 'ENCONTRADO' : 'NÃO ENCONTRADO'}`);
         
         // Se não encontrar por email, tenta buscar por nome parcial
         if (!result && nameQuery) {
@@ -731,19 +734,31 @@ class OSINTApp {
                 const companyLower = d.company.toLowerCase().replace(/\s+/g, '');
                 return companyLower.includes(queryLower) || queryLower.includes(companyLower);
             });
+            console.log(`🏢 Busca por nome: "${nameQuery}" → resultado = ${result ? 'ENCONTRADO: ' + result.company : 'NÃO ENCONTRADO'}`);
         }
 
+        console.log(`✅ queryPublicDatasets retornando: ${result ? 1 : 0} resultado(s)`);
         return result ? [result] : [];
     }
 
     renderPublicDataCard(data, grid) {
-        if (!grid) return;
+        console.log(`🎨 renderPublicDataCard INICIADO para: ${data.company}`);
+        
+        if (!grid) {
+            console.error(`❌ Grid é nulo! Não pode renderizar card`);
+            return;
+        }
+        
+        console.log(`📍 Grid encontrado:`, grid.id, `com ${grid.children.length} filhos`);
         
         // Limpar loader se existir
         const loader = grid.querySelector('#loader');
-        if (loader) loader.remove();
+        if (loader) {
+            console.log(`🗑️ Removendo loader`);
+            loader.remove();
+        }
         
-        console.log("Renderizando dados cadastrais para:", data.company);
+        console.log("📝 Renderizando dados cadastrais para:", data.company);
         
         const cardHTML = `
             <div class="glass-card p-8 rounded-3xl border border-blue-500/40 hover:border-blue-400 bg-blue-500/5 transition-all flex flex-col gap-5 col-span-full">
@@ -810,9 +825,13 @@ class OSINTApp {
         `;
         
         // Inserir no INÍCIO do grid
+        console.log(`➕ Inserindo card HTML no grid`);
         grid.insertAdjacentHTML('afterbegin', cardHTML);
+        console.log(`✅ Card HTML inserido! Grid agora tem ${grid.children.length} filhos`);
+        console.log(`🔍 Card visível no DOM:`, grid.querySelector('.glass-card') ? 'SIM ✓' : 'NÃO ✗');
         
         // Adicionar link ao rodapé
+        console.log(`🔗 Adicionando link para footer`);
         this.addPublicSourceLink({
             title: 'CNPJ.info - ' + data.company,
             url: 'https://www.cnpj.info/' + data.cnpj.replace(/[^0-9]/g, ''),
