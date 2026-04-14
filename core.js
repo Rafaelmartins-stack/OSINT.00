@@ -774,7 +774,7 @@ class OSINTApp {
                 cpf: ''
             },
             {
-                email: 'shirlei@advocaciasmm.com.br',
+                email: 'shirlei@advocaciasmm.com',
                 ownerName: 'Shiriei Maria da Silva Martins',
                 cnpj: '',
                 company: 'Shiriei Maria da Silva Martins - Sociedade Individual de Advocacia',
@@ -788,7 +788,7 @@ class OSINTApp {
                 city: 'São Paulo',
                 state: 'SP',
                 phone: '(11) XXXX-7880',
-                email: 'shirlei@advocaciasmm.com.br',
+                email: 'shirlei@advocaciasmm.com',
                 entityType: 'Profissional',
                 cpf: '181.724.618-60'
             }
