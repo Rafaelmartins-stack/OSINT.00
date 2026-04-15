@@ -88,17 +88,15 @@ class OSINTApp {
     setupEventListeners() {
         console.log("🔧 Configurando Event Listeners...");
         
-        // Search Buttons
-        const searchBtns = document.querySelectorAll('.search-btn');
-        console.log(`📌 Encontrados ${searchBtns.length} botões de busca`);
-        
-        searchBtns.forEach(btn => {
-            const type = btn.getAttribute('data-type');
-            console.log(`➕ Adicionando listener ao botão: ${type}`);
-            btn.addEventListener('click', (e) => {
-                console.log(`🔍 Clicado em: ${type}`);
-                this.handleSearch(type);
-            });
+        // Event delegation for search buttons
+        document.body.addEventListener('click', (e) => {
+            const btn = e.target.closest('.search-btn');
+            if (!btn) return;
+            e.preventDefault();
+            const type = btn.dataset.type;
+            if (!type) return;
+            console.log(`🔍 Clicado em: ${type}`);
+            this.handleSearch(type);
         });
 
         // Enter Key listeners
