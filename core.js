@@ -331,6 +331,11 @@ class OSINTApp {
             this.refreshIcons();
         }
 
+        const publicSourcesList = document.getElementById('publicSourcesList');
+        const publicSourcesSection = document.getElementById('publicSourcesSection');
+        if (publicSourcesList) publicSourcesList.innerHTML = '';
+        if (publicSourcesSection) publicSourcesSection.classList.add('hidden');
+
         this.discoveredLinks.clear();
         this.showAllLinksSection(false);
         this.showPublicDataSection(false);
@@ -355,16 +360,10 @@ class OSINTApp {
             console.log("✅ searchPublicBrazilianDatabases RETORNOU");
         }
 
-        // Render manual links apenas para buscas que não sejam email,
-        // porque no email queremos mostrar os dados pessoais extraídos diretamente.
-        if (type !== 'email') {
-            console.log(`📋 Renderizando ${config.template.length} fontes manuais`);
-            config.template.forEach(item => {
-                if (grid) this.renderAuditStatus(item, query, grid);
-            });
-        } else {
-            console.log(`📋 Ignorando fontes manuais para email; exibindo dados pessoais diretamente.`);
-        }
+        console.log(`📋 Renderizando ${config.template.length} fontes manuais`);
+        config.template.forEach(item => {
+            if (grid) this.renderAuditStatus(item, query, grid);
+        });
 
         // Trigger deep SERP aggregation
         console.log(`🔎 Iniciando descoberta nativa (SERP)`);
@@ -707,6 +706,18 @@ class OSINTApp {
         } else {
             console.warn("⚠️ Nenhum resultado encontrado na base de dados");
             this.showPublicDataSection(false);
+            this.addPublicSourceLink({
+                title: 'Google Search — Email',
+                url: `https://www.google.com/search?q=${encodeURIComponent(email)}`,
+                description: email
+            });
+            if (nameQuery && nameQuery !== email) {
+                this.addPublicSourceLink({
+                    title: 'Google Search — Name',
+                    url: `https://www.google.com/search?q=${encodeURIComponent(nameQuery)}`,
+                    description: nameQuery
+                });
+            }
         }
     }
 
