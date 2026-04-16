@@ -5,33 +5,55 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>OSINT Toolkit | Open Source Intelligence Hub</title>
     <meta name="description" content="A powerful, private, and fast OSINT dashboard for digital investigations.">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="style.css">
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="main.css?v=4.6.1">
+    <script src="https://unpkg.com/lucide@0.400.0/dist/umd/lucide.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>    <script type="module">
+        import { createClient } from 'https://jspm.dev/@supabase/supabase-js'
+
+        const SUPABASE_URL = 'SUA_URL_AQUI'
+        const SUPABASE_KEY = 'SUA_ANON_KEY_AQUI'
+        const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
+
+        async function carregarFerramentas() {
+            const { data, error } = await supabase
+                .from('ferramentas')
+                .select('*')
+
+            if (error) {
+                console.error('Erro ao buscar dados:', error)
+            } else {
+                console.log('Dados do banco:', data)
+                // Aqui você usaria um loop para exibir no seu HTML
+            }
+        }
+
+        carregarFerramentas()
+    </script>    <script src="core.js?v=4.6.2" defer></script>
 </head>
 <body class="bg-slate-950 text-slate-100">
-    <!-- Background Decor -->
     <div class="fixed top-0 left-0 w-full h-full pointer-events-none -z-10 overflow-hidden">
         <div class="absolute top-[-10%] right-[-10%] w-96 h-96 bg-purple-600/20 blur-[120px] rounded-full"></div>
         <div class="absolute bottom-[-10%] left-[-10%] w-96 h-96 bg-cyan-600/10 blur-[120px] rounded-full"></div>
     </div>
 
-    <!-- Main Container -->
     <div class="container mx-auto px-4 py-8 max-w-6xl min-h-screen flex flex-col">
-        
-        <!-- Header -->
         <header class="flex flex-col md:flex-row justify-between items-center mb-12 gap-6 animate-in">
             <div class="flex items-center gap-3">
                 <div class="p-3 bg-purple-600 rounded-xl shadow-lg shadow-purple-600/30">
                     <i data-lucide="shield-check" class="w-8 h-8 text-white"></i>
                 </div>
                 <div>
-                    <h1 class="text-3xl font-bold gradient-text tracking-tight">OSINT Toolkit</h1>
-                    <p class="text-slate-400 text-sm">v1.0.0 • Professional Intelligence Hub</p>
+                    <h1 class="text-3xl font-black text-indigo-500 tracking-tight">OSINT Toolkit</h1>
+                    <p class="text-emerald-400 font-bold text-sm">v4.6.2 Platinum • True Reverse Edition</p>
                 </div>
             </div>
-            
             <div class="flex items-center gap-4">
+                <button id="settingsBtn" class="flex items-center gap-2 bg-indigo-600/20 hover:bg-indigo-600/40 border border-indigo-500/30 text-indigo-300 px-3 py-1.5 rounded-lg transition-all text-xs font-black uppercase tracking-widest shadow-[0_0_15px_rgba(99,102,241,0.2)]">
+                    <i data-lucide="key" class="w-4 h-4"></i> API
+                </button>
                 <div class="flex bg-slate-900/50 p-1 rounded-lg border border-slate-800">
                     <button id="themeToggle" class="p-2 hover:bg-slate-800 rounded-md transition-colors">
                         <i data-lucide="moon" class="w-5 h-5"></i>
@@ -44,9 +66,7 @@
             </div>
         </header>
 
-        <!-- Dashboard Grid -->
         <main class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-            <!-- Username Card -->
             <div class="glass-card rounded-2xl p-6 flex flex-col animate-in" style="animation-delay: 0.1s">
                 <div class="flex items-center gap-3 mb-4 text-purple-400">
                     <i data-lucide="fingerprint" class="w-6 h-6"></i>
@@ -54,15 +74,13 @@
                 </div>
                 <p class="text-slate-400 text-sm mb-6">Investigate individuals via specialized records and deep search platforms.</p>
                 <div class="mt-auto relative">
-                    <input type="text" id="usernameInput" placeholder="Name or Username..." 
-                        class="w-full bg-slate-900/50 border border-slate-700 rounded-lg py-3 px-4 focus:outline-none input-glow transition-all text-sm mb-3 mono-font">
-                    <button data-type="username" class="search-btn w-full bg-purple-600 hover:bg-purple-500 text-white font-medium py-2.5 rounded-lg transition-all active:scale-95 flex items-center justify-center gap-2">
+                    <input type="text" id="usernameInput" placeholder="Name or Username..." class="w-full bg-slate-900/50 border border-slate-700 rounded-lg py-3 px-4 focus:outline-none input-glow transition-all text-sm mb-3 mono-font">
+                    <button type="button" data-type="username" class="search-btn w-full bg-purple-600 hover:bg-purple-500 text-white font-medium py-2.5 rounded-lg transition-all active:scale-95 flex items-center justify-center gap-2">
                         Execute Search <i data-lucide="arrow-right" class="w-4 h-4"></i>
                     </button>
                 </div>
             </div>
 
-            <!-- Domain Card -->
             <div class="glass-card rounded-2xl p-6 flex flex-col animate-in" style="animation-delay: 0.2s">
                 <div class="flex items-center gap-3 mb-4 text-cyan-400">
                     <i data-lucide="globe" class="w-6 h-6"></i>
@@ -70,15 +88,13 @@
                 </div>
                 <p class="text-slate-400 text-sm mb-6">Investigate hosts, DNS records, and vulnerability reports.</p>
                 <div class="mt-auto">
-                    <input type="text" id="domainInput" placeholder="example.com or IP..." 
-                        class="w-full bg-slate-900/50 border border-slate-700 rounded-lg py-3 px-4 focus:outline-none input-glow transition-all text-sm mb-3 mono-font">
-                    <button data-type="domain" class="search-btn w-full bg-cyan-600 hover:bg-cyan-500 text-white font-medium py-2.5 rounded-lg transition-all active:scale-95 flex items-center justify-center gap-2">
+                    <input type="text" id="domainInput" placeholder="example.com or IP..." class="w-full bg-slate-900/50 border border-slate-700 rounded-lg py-3 px-4 focus:outline-none input-glow transition-all text-sm mb-3 mono-font">
+                    <button type="button" data-type="domain" class="search-btn w-full bg-cyan-600 hover:bg-cyan-500 text-white font-medium py-2.5 rounded-lg transition-all active:scale-95 flex items-center justify-center gap-2">
                         Look Up <i data-lucide="arrow-right" class="w-4 h-4"></i>
                     </button>
                 </div>
             </div>
 
-            <!-- Google Dorking -->
             <div class="glass-card rounded-2xl p-6 flex flex-col animate-in" style="animation-delay: 0.3s">
                 <div class="flex items-center gap-3 mb-4 text-amber-400">
                     <i data-lucide="search" class="w-6 h-6"></i>
@@ -86,16 +102,13 @@
                 </div>
                 <p class="text-slate-400 text-sm mb-6">Generate advanced search queries for specific target domains.</p>
                 <div class="mt-auto">
-                    <input type="text" id="dorkInput" placeholder="Domain or Full Name..." 
-                        class="w-full bg-slate-900/50 border border-slate-700 rounded-lg py-3 px-4 focus:outline-none input-glow transition-all text-sm mb-3 mono-font">
-                    <button data-type="dorking" class="search-btn w-full bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold py-2.5 rounded-lg transition-all active:scale-95 flex items-center justify-center gap-2">
+                    <input type="text" id="dorkInput" placeholder="Domain or Full Name..." class="w-full bg-slate-900/50 border border-slate-700 rounded-lg py-3 px-4 focus:outline-none input-glow transition-all text-sm mb-3 mono-font">
+                    <button type="button" data-type="dorking" class="search-btn w-full bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold py-2.5 rounded-lg transition-all active:scale-95 flex items-center justify-center gap-2">
                         Generate Dorks <i data-lucide="arrow-right" class="w-4 h-4"></i>
                     </button>
                 </div>
-
             </div>
 
-            <!-- Email Card -->
             <div class="glass-card rounded-2xl p-6 flex flex-col animate-in" style="animation-delay: 0.4s">
                 <div class="flex items-center gap-3 mb-4 text-emerald-400">
                     <i data-lucide="mail" class="w-6 h-6"></i>
@@ -103,15 +116,15 @@
                 </div>
                 <p class="text-slate-400 text-sm mb-6">Verify email validity and check for known data breaches.</p>
                 <div class="mt-auto">
-                    <input type="email" id="emailInput" placeholder="user@target.com..." 
-                        class="w-full bg-slate-900/50 border border-slate-700 rounded-lg py-3 px-4 focus:outline-none input-glow transition-all text-sm mb-3 mono-font">
-                    <button data-type="email" class="search-btn w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-2.5 rounded-lg transition-all active:scale-95 flex items-center justify-center gap-2">
+                    <input type="email" id="emailInput" placeholder="user@target.com..." class="w-full bg-slate-900/50 border border-slate-700 rounded-lg py-3 px-4 focus:outline-none input-glow transition-all text-sm mb-3 mono-font">
+                    <button type="button" data-type="email" class="search-btn w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-2.5 rounded-lg transition-all active:scale-95 flex items-center justify-center gap-2">
                         Validate Mail <i data-lucide="arrow-right" class="w-4 h-4"></i>
                     </button>
                 </div>
             </div>
         </main>
 
+<<<<<<< HEAD
         <!-- Insights Section (Real Time Data) -->
         <section id="insightsSection" class="hidden animate-in mb-8">
             <div class="glass-card rounded-2xl p-6 border-purple-500/20">
@@ -126,47 +139,92 @@
         </section>
 
         <!-- Results Section (Initially Hidden) -->
+=======
+>>>>>>> 3f8231545c6d6c33abc5b1ef721b81fb9dd4b622
         <section id="resultsSection" class="hidden animate-in">
             <div class="glass-card rounded-2xl p-8 mb-12">
                 <div class="flex justify-between items-center mb-6 border-b border-slate-800 pb-4">
-                    <h2 id="resultTitle" class="text-xl font-bold flex items-center gap-3">
-                        <i data-lucide="list" class="w-5 h-5 text-purple-400"></i>
-                        Analysis Results
+                    <h2 id="resultTitle" class="text-sm font-black flex items-center gap-3 uppercase tracking-widest text-indigo-400">
+                        Resultados de Inteligência (Hyper-Match)
                     </h2>
-                    <span id="resultMeta" class="text-xs text-slate-500 mono-font">QUERY: NONE</span>
+                    <span id="resultMeta" class="text-xs text-slate-500 mono-font font-black">QUERY: NONE</span>
                 </div>
-                
-                <div id="resultsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <!-- Result items will be injected here -->
+
+                <div id="publicDataSection" class="hidden mb-6">
+                    <div id="publicDataContainer" class="grid gap-3"></div>
+                </div>
+
+                <div id="resultsGrid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3"></div>
+
+                <div id="googleLinksSection" class="hidden mt-8">
+                    <div class="glass-card rounded-2xl p-6 bg-slate-900/80 border border-slate-800">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-sm font-black uppercase tracking-widest text-indigo-400">Google Search Results</h3>
+                            <span id="googleLinksCount" class="text-[10px] text-slate-500 mono-font"></span>
+                        </div>
+                        <div id="googleLinksList" class="grid gap-3"></div>
+                    </div>
+                </div>
+
+                <div id="allLinksSection" class="hidden mt-8">
+                    <div class="glass-card rounded-2xl p-6 bg-slate-900/80 border border-slate-800">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-sm font-black uppercase tracking-widest text-indigo-400">Todos os Links Encontrados</h3>
+                            <span id="allLinksCount" class="text-[10px] text-slate-500 mono-font"></span>
+                        </div>
+                        <div id="allLinksList" class="grid gap-3"></div>
+                    </div>
                 </div>
             </div>
         </section>
 
-        <!-- History Footer -->
         <footer class="mt-auto border-t border-slate-800 pt-8 pb-4 animate-in" style="animation-delay: 0.5s">
+            <div id="publicSourcesSection" class="hidden mb-8">
+                <div class="flex items-center gap-4 mb-4">
+                    <i data-lucide="link-2" class="w-4 h-4 text-blue-500"></i>
+                    <h4 class="text-xs font-bold uppercase tracking-widest text-blue-400">Fontes Públicas</h4>
+                </div>
+                <div id="publicSourcesList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    <!-- Links públicos aparecem aqui -->
+                </div>
+            </div>
+
             <div class="flex items-center gap-4 mb-4">
                 <i data-lucide="history" class="w-4 h-4 text-slate-500"></i>
                 <h4 class="text-xs font-bold uppercase tracking-widest text-slate-500">Search History</h4>
             </div>
             <div id="historyList" class="flex flex-wrap gap-2">
-                <!-- History items injected here -->
                 <span class="text-xs text-slate-600 italic">No recent activity found.</span>
             </div>
         </footer>
     </div>
 
-    <!-- Modals / Toast -->
     <div id="toast" class="fixed bottom-8 right-8 bg-slate-900 border border-slate-700 p-4 rounded-xl shadow-2xl opacity-0 transform translate-y-10 transition-all pointer-events-none z-50 flex items-center gap-3">
         <i data-lucide="info" class="w-5 h-5 text-purple-400"></i>
         <p id="toastMessage" class="text-sm font-medium"></p>
     </div>
 
-    <script src="app.js"></script>
-    <script>
-        // Init Lucide Icons
-        window.addEventListener('DOMContentLoaded', () => {
-            lucide.createIcons();
-        });
-    </script>
+    <div id="settingsModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="glass-card max-w-md w-full bg-slate-900 border border-indigo-500/50 rounded-2xl shadow-2xl overflow-hidden transform scale-95 transition-transform relative">
+            <div class="bg-indigo-600 p-4 flex items-center justify-between">
+                <h3 class="font-black text-white uppercase tracking-widest flex items-center gap-2">
+                    <i data-lucide="key" class="w-5 h-5"></i> Professional API Key
+                </h3>
+                <button id="closeSettingsBtn" class="text-white hover:text-indigo-200 transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <p class="text-xs text-slate-300 mb-4 leading-relaxed">
+                    Client-side tools are blocked from fetching Google results natively. To bypass anti-bot protection and scrape results flawlessly, please obtain a free API key from <a href="https://serper.dev" target="_blank" class="text-indigo-400 font-bold hover:underline">Serper.dev</a> (2500 free searches limit).
+                </p>
+                <div class="mb-5">
+                    <label class="block text-[10px] font-black tracking-widest text-indigo-400 uppercase mb-2">Serper.dev API Key</label>
+                    <input type="password" id="serperKeyInput" placeholder="Paste your API key here..." class="w-full bg-slate-950 border border-slate-700 rounded-lg py-3 px-4 focus:outline-none focus:border-indigo-500 input-glow transition-all text-sm mono-font text-white">
+                </div>
+                <button id="saveSettingsBtn" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-3 rounded-xl uppercase tracking-widest transition-all">Save Key & Unlock Engine</button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

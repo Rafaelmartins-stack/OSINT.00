@@ -1,0 +1,3 @@
+v4.0.0 Platinum - True Reverse Edition
+Modified: 2026-04-12 11:24:00
+Status: Integrated true Reverse-Email OSINT engines (Epieos / IntelX). Cache hard-busted via query strings.

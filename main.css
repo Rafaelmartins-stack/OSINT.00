@@ -1,0 +1,66 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+    --bg-dark: #070b14;
+    --card-bg: rgba(13, 17, 28, 0.8);
+    --accent: #6366f1;
+    --accent-glow: rgba(99, 102, 241, 0.4);
+    --text-primary: #ffffff;
+    --text-secondary: #94a3b8;
+    --border-color: rgba(99, 102, 241, 0.2);
+}
+
+body.light-mode {
+    --bg-dark: #f0f2f5;
+    --card-bg: rgba(255, 255, 255, 0.9);
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --border-color: rgba(99, 102, 241, 0.1);
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--bg-dark);
+    color: var(--text-primary);
+    min-height: 100vh;
+    transition: all 0.3s ease;
+}
+
+.glass-card {
+    background: var(--card-bg);
+    backdrop-filter: blur(16px);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 10px 40px -10px rgba(0,0,0,0.5);
+    transition: all 0.3s ease;
+}
+
+.glass-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-4px);
+    box-shadow: 0 20px 50px -15px rgba(99, 102, 241, 0.3);
+}
+
+.status-link {
+    background: #0f172a !important;
+    border: 1px solid rgba(99,102,241,0.5) !important;
+    box-shadow: 0 0 15px rgba(99,102,241,0.1);
+    transition: all 0.2s !important;
+}
+
+.status-link:hover {
+    background: #6366f1 !important;
+    border-color: #818cf8 !important;
+}
+
+.status-link i {
+    width: 20px;
+    height: 20px;
+}
+
+.mono-font { font-family: 'JetBrains Mono', monospace; }
+
+.animate-spin { animation: spin 1s linear infinite; }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+.animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
